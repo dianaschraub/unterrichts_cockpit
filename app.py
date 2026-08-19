@@ -1,7 +1,3 @@
-
-
-    
-
 import streamlit as st
 import pandas as pd
 import datetime
@@ -121,8 +117,8 @@ with tab1:
     
     st.markdown(f"### Unterricht mit: {student}")
     st.progress(0.45, text="Stunde läuft - Zeitbalken")
-
-    # --- ÜBUNGS- & ETIÜDEN-BEREICH ---
+    
+    # --- ÜBUNGS- & ETIÜDEN-BEREICH (Mit Tastenforscher an 1. Stelle) ---
     st.markdown("---")
     st.markdown("### 🎹 Übungs- & Technik-Auswahl")
     
@@ -168,8 +164,7 @@ with tab1:
             etuede_tempo = st.number_input("Tempo (BPM):", min_value=40, max_value=250, value=100, step=2)
             
         etuede_notizen = st.text_area("Weitere Notizen:", value="Fokus auf Artikulation.")
-        speicher_text = f"Etüde: '{etuede_titel}'
-   
+        speicher_text = f"Etüde: '{etuede_titel}' ({komponist}, {opus_nr}) | Takte: {etuede_takte} | Tempo: {etuede_tempo} BPM"
 
     aktuelles_stueck_input = st.text_input("Gespieltes Hauptstück:", value="Sonatine Opus 36")
     
