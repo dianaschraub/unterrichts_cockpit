@@ -1,138 +1,4 @@
-
-
-Eingefügter Text(1).txt
-Dokument
-
-Nein – in der aktuellen Datei sind diese beiden Kernfunktionen noch nicht wirklich umgesetzt. Gut, dass du das ansprichst.
-
-Die fertige App soll so funktionieren:
-
-Beim Öffnen schaut sie auf Datum und Uhrzeit.
-
-Sie liest den aktuellen Termin aus deinem Google Kalender.
-
-Steht dort beispielsweise „Klavierunterricht Emma, 15:00–15:45“, erscheint automatisch Emma.
-
-Gleichzeitig werden Emmas bisherige Stücke, Aufgaben, Notizen und benötigte Noten geladen.
-
-Über gut sichtbare Schaltflächen öffnest du die zugehörigen Noten mit einem Klick.
-
-Im vorhandenen Code ist die Kalenderfunktion noch leer – sie gibt immer None zurück. Auch das Feld für den Notenlink speichert bislang lediglich Text; es erzeugt noch keinen funktionierenden Noten-Button.
-
-Die schmale Seitenleiste würde ich deshalb ändern:
-
-Der automatisch erkannte Schüler wird oben deutlich angezeigt.
-
-Eine manuelle Schülerauswahl bleibt nur als unauffällige Notlösung bestehen – etwa bei einer Vertretungsstunde, Terminverschiebung oder wenn der Kalender einmal keinen passenden Eintrag findet.
-
-Du musst im normalen Unterricht nichts selbst auswählen.
-
-Bei den Noten gibt es einen wichtigen Unterschied:
-
-Cloud-Dateien können direkt über Schaltflächen geöffnet werden.
-
-Eine angeschlossene SSD kann die App nur direkt lesen, wenn sie auf demselben Laptop lokal läuft. Eine im Internet veröffentlichte App kann aus Sicherheitsgründen nicht auf eine SSD zugreifen, die an deinem Tablet oder Laptop steckt.
-
-Bevor ich weiterbaue, brauche ich deshalb zwei kurze Angaben:
-
-Soll die App später über das Internet auf Tablet und Laptop laufen oder nur lokal auf deinem Laptop?
-
-Wie heißen deine Unterrichtstermine im Google Kalender – zum Beispiel nur „Emma“ oder „Klavierunterricht Emma“?
-
-Danach richte ich das Design konsequent um diese beiden Hauptfunktionen herum aus.
-
-
-Die App soll später auf meinem Tablet laufen oder auf meinem Handy ein Laptop habe ich nicht Die Unterrichtstermine heißen dann nur immer Luisa also dort wird immer nur der Name von dem Schüler angezeigt oder ein von mir eingetragen 
-
-Perfekt – damit ist die passende Lösung klar: Die App wird als geschützte Web-App veröffentlicht und läuft anschließend im Browser auf Tablet und Handy. Ein Laptop ist dafür nicht nötig.
-
-Der Ablauf wird so gestaltet:
-
-Um 15:00 Uhr öffnest du die App.
-
-Sie prüft automatisch den momentan laufenden Google-Kalendertermin.
-
-Steht im Termintitel nur „Luisa“, verwendet die App genau diesen Namen.
-
-Sie sucht Luisa im Schülerarchiv und zeigt sofort ihre Stücke, letzten Aufgaben, Notizen, Fortschritte und Notenlinks an.
-
-Oben steht beispielsweise: „Luisa · automatisch aus dem Kalender erkannt · 15:00–15:45“.
-
-Nur wenn kein passender Termin gefunden wird, erscheint eine kleine manuelle Schülerauswahl als Notlösung.
-
-Die bisherige Seitenleiste werde ich daher deutlich zurücknehmen. Sie soll nicht deine normale Schülerauswahl sein.
-
-Für die Noten empfehle ich Google Drive. Dann können neben jedem Stück klare Schaltflächen stehen:
-
-„Noten öffnen“
-
-„Tastenforscher öffnen“
-
-„Konzertstück öffnen“
-
-Die Datei öffnet sich direkt auf dem Tablet oder Handy. Eine SSD beziehungsweise Speicherkarte ist dafür leider ungeeignet: Eine veröffentlichte Web-App darf aus Sicherheitsgründen nicht selbstständig auf Dateien zugreifen, die lokal an deinem Mobilgerät angeschlossen sind. Cloudlinks funktionieren dagegen zuverlässig.
-
-Ich plane deshalb jetzt fest mit:
-
-Google Kalender zur automatischen Schülererkennung
-
-Google Sheets als dauerhaftem Archiv
-
-Google Drive für die Noten
-
-manueller Schülerauswahl nur als Reserve
-
-Damit arbeiten Kalender, Archiv und Noten in einem gemeinsamen Google-System zusammen.
-
-
-Kannst du noch ein weiteres Feld hinzufügen nächster Schüler mit Name und Uhrzeit weil manchmal habe ich auch Lücken zwischen den Schülern und dann wäre es natürlich einfach gut zu wissen wann der nächste kommt 
-
-Ja, das Feld ist ergänzt. Im oberen Bereich stehen nun:
-
-Aktueller Schüler mit Unterrichtsdatum und Dauer
-
-Nächster Schüler mit Name und Uhrzeit
-
-Zeit bis zum nächsten Termin, zum Beispiel „in 45 Minuten“
-
-Nach dem letzten Termin: „Heute kein weiterer Schüler“
-
-Die tatsächlichen Namen und Uhrzeiten werden automatisch eingesetzt, sobald wir die Google-Kalender-Verbindung anschließen. Die manuelle Auswahl bleibt nur als Reserve.
-
-
-Vielleicht kannst du an die Seite auch noch so eine schmale Leiste einfügen wo die Schüler die heute noch kommen alle einmal kurz aufgelistet sind also links finde ich das vielleicht ganz ideal und andersfarbig hinterlegt und dann also so ein Zeitstrahl von oben nach unten auf dem die Schüler eingetragen sind mit ihrem anfangs und Endzeit also so ähnlich ja wie Sonne tagesleiste auf dem Kalender 
-
-
-Und dass ich die Liste dann einfach weiter verschiebt also die Schüler die schon da waren dass die dann aus der Liste rausrutschen und die Liste so zusammen im Laufe des Tages immer kürzer wird und dann eben beim letzten nach dem letzten Schüler irgendwas lustiges schreibt wie z.B Feierabend 
-
-Die dynamische Tagesleiste ist eingebaut:
-
-Nur laufende und kommende Schüler bleiben sichtbar.
-
-Vergangene Termine rutschen automatisch aus der Liste.
-
-Anfangs- und Endzeiten stehen bei jedem Schüler.
-
-Unterrichtslücken werden als Pause angezeigt.
-
-Die aktuelle Stunde wird farblich hervorgehoben.
-
-Nach dem letzten Schüler erscheint: „Feierabend! Auch der Flügel hat jetzt frei.“
-
-klavier_cockpit_professionell.py
-
-Die echten Namen und Uhrzeiten werden eingesetzt, sobald wir die Google-Kalender-Verbindung anschließen.
-
-
-klavier_cockpit_professionell.py
-Code
-
-
-Bibliothek
-/
-klavier_cockpit_professionell.py
-
-
+# Klavierlehrer Live-Cockpit
 import streamlit as st
 import pandas as pd
 import datetime
@@ -143,7 +9,7 @@ from fpdf import FPDF
 import urllib.parse
 
 # --- SETUP & DESIGN-KONFIGURATION ---
-st.set_page_config(page_title="Klavierlehrer Cockpit", layout="wide", page_icon="🎹")
+st.set_page_config(page_title="Klavierlehrer Cockpit", layout="wide", page_icon="ðŸŽ¹")
 
 st.markdown("""
     <style>
@@ -187,7 +53,7 @@ st.markdown("""
         color: white; padding: 26px 30px; border-radius: 18px; margin-bottom: 18px;
         box-shadow: 0 15px 35px rgba(23,36,59,.18); position: relative; overflow: hidden;
     }
-    .hero:after { content:'♪'; position:absolute; right:28px; top:-28px; font-size:130px; color:rgba(230,212,167,.12); }
+    .hero:after { content:'â™ª'; position:absolute; right:28px; top:-28px; font-size:130px; color:rgba(230,212,167,.12); }
     .hero-kicker { color: var(--gold-light); text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 700; }
     .hero-title { font-family:'Playfair Display',serif; font-size: 34px; font-weight: 700; margin: 4px 0; }
     .hero-subtitle { color: #dfe5ec; margin: 0; font-size: 15px; }
@@ -239,7 +105,7 @@ st.markdown("""
         background:rgba(255,253,248,.9); border:1px solid var(--line); padding:15px 17px;
         border-radius:12px; box-shadow:0 6px 16px rgba(23,36,59,.045);
     }
-    /* Edle Box für das Lobkärtchen */
+    /* Edle Box fÃ¼r das LobkÃ¤rtchen */
     .lob-box {
         background: linear-gradient(135deg, #fffdf7 0%, #f5ead0 100%);
         border: 1px solid var(--gold); padding: 18px; border-radius: 14px;
@@ -278,7 +144,7 @@ def berechne_konzert_countdown():
         return "Das Vorspiel ist bereits vorbei"
 
 def berechne_fortschritt_unterricht(start_minute=0, dauer=45):
-    """Platzhalter für die spätere automatische Kalender-/Zeiterkennung."""
+    """Platzhalter fÃ¼r die spÃ¤tere automatische Kalender-/Zeiterkennung."""
     return min(max(start_minute / dauer, 0.0), 1.0)
 
 def abschnitt(kicker, titel, beschreibung):
@@ -297,13 +163,13 @@ def abschnitt(kicker, titel, beschreibung):
 def lade_archiv_aus_sheet():
     daten = {
         'Schueler': ['Emma', 'Max', 'Lina'],
-        'Stueck': ['Sonatine Opus 36', 'Für Elise', 'Inventio 1'],
-        'Konzertstueck': ['Sonatine 1. Satz', 'Für Elise', 'Inventio 1'],
+        'Stueck': ['Sonatine Opus 36', 'FÃ¼r Elise', 'Inventio 1'],
+        'Konzertstueck': ['Sonatine 1. Satz', 'FÃ¼r Elise', 'Inventio 1'],
         'Dauer_Minuten': [45, 60, 30],
         'Schwierigkeit': [3, 4, 2],
-        'Kärtchen_Erhalten': ['Ja', 'Nein', 'Ja'],
-        'Grund': ['Toller Rhythmus im Takt 12', '', 'Wunderschöne Dynamik'],
-        'Bis_Naechsten_Mal': ['Takt 15-20 langsam üben', 'Pedalwechsel weicher gestalten', 'Rhythmus klatschen']
+        'KÃ¤rtchen_Erhalten': ['Ja', 'Nein', 'Ja'],
+        'Grund': ['Toller Rhythmus im Takt 12', '', 'WunderschÃ¶ne Dynamik'],
+        'Bis_Naechsten_Mal': ['Takt 15-20 langsam Ã¼ben', 'Pedalwechsel weicher gestalten', 'Rhythmus klatschen']
     }
     return pd.DataFrame(daten)
 
@@ -330,22 +196,22 @@ def finde_aktuellen_und_naechsten_termin(termine, jetzt=None):
 def formatiere_pause(minuten):
     if minuten >= 60:
         stunden, rest = divmod(minuten, 60)
-        return f"Pause · {stunden} Std. {rest} Min."
-    return f"Pause · {minuten} Min."
+        return f"Pause Â· {stunden} Std. {rest} Min."
+    return f"Pause Â· {minuten} Min."
 
 def erstelle_tagesleisten_html(termine, jetzt=None):
     if termine is None:
         return '<div class="rail-empty">Die Tagesleiste erscheint hier, sobald der Google Kalender verbunden ist.</div>'
 
     if not termine:
-        return '<div class="rail-empty"><strong>Heute keine Termine.</strong><br>Zeit für freie Improvisation.</div>'
+        return '<div class="rail-empty"><strong>Heute keine Termine.</strong><br>Zeit fÃ¼r freie Improvisation.</div>'
 
     jetzt = jetzt or datetime.datetime.now(ZoneInfo("Europe/Berlin"))
     sortierte_termine = sorted(termine, key=lambda termin: termin["start"])
     verbleibende_termine = [termin for termin in sortierte_termine if termin["ende"] > jetzt]
 
     if not verbleibende_termine:
-        return '<div class="rail-empty"><strong>Feierabend!</strong><br>Auch der Flügel hat jetzt frei.</div>'
+        return '<div class="rail-empty"><strong>Feierabend!</strong><br>Auch der FlÃ¼gel hat jetzt frei.</div>'
 
     bausteine = ['<div class="day-rail">']
     erster_termin = verbleibende_termine[0]
@@ -363,7 +229,7 @@ def erstelle_tagesleisten_html(termine, jetzt=None):
 
         status = "active" if termin["start"] <= jetzt < termin["ende"] else "future"
         name = html.escape(str(termin.get("name", "Ohne Namen")))
-        zeit = f'{termin["start"].strftime("%H:%M")}–{termin["ende"].strftime("%H:%M")} Uhr'
+        zeit = f'{termin["start"].strftime("%H:%M")}â€“{termin["ende"].strftime("%H:%M")} Uhr'
         bausteine.append(
             f'<div class="rail-entry {status}"><div class="rail-dot"></div>'
             f'<div class="rail-card"><div class="rail-time">{zeit}</div>'
@@ -376,14 +242,14 @@ def erstelle_tagesleisten_html(termine, jetzt=None):
 
 def formatiere_naechsten_termin(termin, kalender_verbunden=False):
     if not termin and not kalender_verbunden:
-        return "Noch nicht verbunden", "Google Kalender wird im nächsten Schritt angeschlossen"
+        return "Noch nicht verbunden", "Google Kalender wird im nÃ¤chsten Schritt angeschlossen"
     if not termin:
-        return "Heute niemand mehr", "Feierabend – auch der Flügel hat jetzt frei"
+        return "Heute niemand mehr", "Feierabend â€“ auch der FlÃ¼gel hat jetzt frei"
 
     name = termin.get("name", "Unbekannt")
     start = termin.get("start")
     if not start:
-        return name, "Uhrzeit nicht verfügbar"
+        return name, "Uhrzeit nicht verfÃ¼gbar"
 
     jetzt = datetime.datetime.now(start.tzinfo) if start.tzinfo else datetime.datetime.now()
     minuten_bis_start = max(0, int((start - jetzt).total_seconds() // 60))
@@ -392,7 +258,7 @@ def formatiere_naechsten_termin(termin, kalender_verbunden=False):
         abstand = f"in {stunden} Std. {minuten} Min."
     else:
         abstand = f"in {minuten_bis_start} Minuten"
-    return f"{name} · {start.strftime('%H:%M')} Uhr", abstand
+    return f"{name} Â· {start.strftime('%H:%M')} Uhr", abstand
 
 # --- ZERTIFIKAT FUNKTION ---
 def erstelle_zertifikat_pdf(student, df_archiv):
@@ -416,7 +282,7 @@ def erstelle_zertifikat_pdf(student, df_archiv):
     pdf.cell(200, 10, txt="Besondere Erfolge - dafuer habe ich ein Lobkaertchen erhalten:", ln=True)
     pdf.set_font("Arial", size=12)
     
-    lob = df_archiv[(df_archiv['Schueler'] == student) & (df_archiv['Kärtchen_Erhalten'] == 'Ja')]
+    lob = df_archiv[(df_archiv['Schueler'] == student) & (df_archiv['KÃ¤rtchen_Erhalten'] == 'Ja')]
     for _, row in lob.iterrows():
         pdf.cell(200, 10, txt=f"* {row['Grund']}", ln=True)
         
@@ -436,7 +302,7 @@ naechster_titel, naechster_hinweis = formatiere_naechsten_termin(
 )
 
 with st.sidebar:
-    st.markdown('<div class="day-label">Tagesübersicht</div>', unsafe_allow_html=True)
+    st.markdown('<div class="day-label">TagesÃ¼bersicht</div>', unsafe_allow_html=True)
     st.markdown('<div class="day-title">Heute im Unterricht</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="day-date">{datetime.date.today().strftime("%d.%m.%Y")}</div>', unsafe_allow_html=True)
     st.markdown(erstelle_tagesleisten_html(heutige_termine, jetzt), unsafe_allow_html=True)
@@ -447,13 +313,13 @@ with st.sidebar:
         dauer_minuten = int((aktueller_termin["ende"] - aktueller_termin["start"]).total_seconds() // 60)
         st.success(f"Aktuell: {student}")
         fortschritt = (jetzt - aktueller_termin["start"]).total_seconds() / (aktueller_termin["ende"] - aktueller_termin["start"]).total_seconds()
-        st.progress(min(max(fortschritt, 0.0), 1.0), text=f'{aktueller_termin["start"].strftime("%H:%M")}–{aktueller_termin["ende"].strftime("%H:%M")} Uhr')
+        st.progress(min(max(fortschritt, 0.0), 1.0), text=f'{aktueller_termin["start"].strftime("%H:%M")}â€“{aktueller_termin["ende"].strftime("%H:%M")} Uhr')
     else:
-        with st.expander("Schüler manuell auswählen", expanded=heutige_termine is None):
-            student = st.selectbox("Schüler", schueler_liste, label_visibility="collapsed")
+        with st.expander("SchÃ¼ler manuell auswÃ¤hlen", expanded=heutige_termine is None):
+            student = st.selectbox("SchÃ¼ler", schueler_liste, label_visibility="collapsed")
             unterrichtsdatum = st.date_input("Datum", value=datetime.date.today(), format="DD.MM.YYYY")
             dauer_minuten = st.selectbox("Dauer", [30, 45, 60], index=1, format_func=lambda x: f"{x} Minuten")
-        st.caption("Die manuelle Auswahl wird nur benötigt, wenn gerade kein Kalendertermin läuft.")
+        st.caption("Die manuelle Auswahl wird nur benÃ¶tigt, wenn gerade kein Kalendertermin lÃ¤uft.")
 
 # --- UI NAVIGATION ---
 tab1, tab2, tab3 = st.tabs(["Live-Cockpit", "Analyse & Fortschritt", "Zertifikate & TaskCards"])
@@ -473,38 +339,38 @@ with tab1:
     uebersicht1, uebersicht2, uebersicht3 = st.columns([1.05, 1.2, 1.25])
     with uebersicht1:
         st.markdown(
-            f"""<div class="summary-card"><div class="summary-label">Aktueller Schüler</div>
-            <div class="summary-value">{student}</div><div class="summary-note">{unterrichtsdatum.strftime('%d.%m.%Y')} · {dauer_minuten} Minuten · Unterricht aktiv</div></div>""",
+            f"""<div class="summary-card"><div class="summary-label">Aktueller SchÃ¼ler</div>
+            <div class="summary-value">{student}</div><div class="summary-note">{unterrichtsdatum.strftime('%d.%m.%Y')} Â· {dauer_minuten} Minuten Â· Unterricht aktiv</div></div>""",
             unsafe_allow_html=True,
         )
     with uebersicht2:
         st.markdown(
-            f"""<div class="summary-card"><div class="summary-label">Nächster Schüler</div>
+            f"""<div class="summary-card"><div class="summary-label">NÃ¤chster SchÃ¼ler</div>
             <div class="summary-value">{naechster_titel}</div><div class="summary-note">{naechster_hinweis}</div></div>""",
             unsafe_allow_html=True,
         )
     with uebersicht3:
         st.markdown(
-            f"""<div class="summary-card"><div class="summary-label">Klassenvorspiel · 02.09.2026</div>
+            f"""<div class="summary-card"><div class="summary-label">Klassenvorspiel Â· 02.09.2026</div>
             <div class="summary-value">{berechne_konzert_countdown()}</div><div class="summary-note">Konzertvorbereitung im Blick behalten</div></div>""",
             unsafe_allow_html=True,
         )
 
-    abschnitt("01 · Technik", "Übungs- und Technikbereich", "Wähle den passenden Bereich und dokumentiere nur das, was heute relevant ist.")
+    abschnitt("01 Â· Technik", "Ãœbungs- und Technikbereich", "WÃ¤hle den passenden Bereich und dokumentiere nur das, was heute relevant ist.")
     modus = st.radio(
-        "Bereich auswählen",
-        ["Tastenforscher", "Klassische Tonleitern", "Fortgeschrittene Etüden"],
+        "Bereich auswÃ¤hlen",
+        ["Tastenforscher", "Klassische Tonleitern", "Fortgeschrittene EtÃ¼den"],
         horizontal=True,
     )
 
     if modus == "Tastenforscher":
         col_h1, col_h2, col_h3 = st.columns([1.2, 0.8, 1.4])
         with col_h1:
-            heft_titel = st.text_input("Titel der Übung", value="Tastenforscher")
+            heft_titel = st.text_input("Titel der Ãœbung", value="Tastenforscher")
         with col_h2:
-            seiten_zahl = st.text_input("Seite", placeholder="z. B. 12–13")
+            seiten_zahl = st.text_input("Seite", placeholder="z. B. 12â€“13")
         with col_h3:
-            heft_link = st.text_input("Dateilink · Cloud oder SSD", placeholder="Optional")
+            heft_link = st.text_input("Dateilink Â· Cloud oder SSD", placeholder="Optional")
         speicher_text = f"Tastenforscher: {heft_titel}, {seiten_zahl or 'ohne Seitenangabe'}"
 
     elif modus == "Klassische Tonleitern":
@@ -514,66 +380,66 @@ with tab1:
         with col_t2:
             bewegung_wahl = st.radio("Spielart", ["Parallelbewegung", "Gegenbewegung"], horizontal=True)
         tempo_wahl = st.slider("Tempo", min_value=40, max_value=200, value=80, step=2, format="%d BPM")
-        speicher_text = f"Tonleiter: {tonleiter_text or 'ohne Tonart'} · {bewegung_wahl} · {tempo_wahl} BPM"
+        speicher_text = f"Tonleiter: {tonleiter_text or 'ohne Tonart'} Â· {bewegung_wahl} Â· {tempo_wahl} BPM"
 
     else:
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
-            etuede_titel = st.text_input("Etüde oder Name", placeholder="z. B. Etüde Nr. 6")
+            etuede_titel = st.text_input("EtÃ¼de oder Name", placeholder="z. B. EtÃ¼de Nr. 6")
         with col_e2:
             komponist = st.text_input("Komponist", placeholder="z. B. Czerny")
         with col_e3:
             opus_nr = st.text_input("Opus oder Werknummer", placeholder="z. B. op. 299")
         col_e4, col_e5 = st.columns([1.2, 0.8])
         with col_e4:
-            etuede_takte = st.text_input("Gespielte Takte", placeholder="z. B. Takt 1–32")
+            etuede_takte = st.text_input("Gespielte Takte", placeholder="z. B. Takt 1â€“32")
         with col_e5:
             etuede_tempo = st.number_input("Tempo in BPM", min_value=40, max_value=250, value=100, step=2)
         etuede_notizen = st.text_area("Technische Beobachtung", placeholder="z. B. Fokus auf Artikulation", height=90)
-        speicher_text = f"Etüde: {etuede_titel or 'ohne Titel'} · {komponist or 'ohne Komponist'} · {opus_nr or 'ohne Werknummer'} · {etuede_takte or 'ohne Taktangabe'} · {etuede_tempo} BPM"
+        speicher_text = f"EtÃ¼de: {etuede_titel or 'ohne Titel'} Â· {komponist or 'ohne Komponist'} Â· {opus_nr or 'ohne Werknummer'} Â· {etuede_takte or 'ohne Taktangabe'} Â· {etuede_tempo} BPM"
 
-    abschnitt("02 · Repertoire", "Stücke und Konzertziel", "Trenne das aktuell erarbeitete Repertoire klar vom ausgewählten Vorspielstück.")
+    abschnitt("02 Â· Repertoire", "StÃ¼cke und Konzertziel", "Trenne das aktuell erarbeitete Repertoire klar vom ausgewÃ¤hlten VorspielstÃ¼ck.")
     col_stueck1, col_stueck2 = st.columns(2)
     with col_stueck1:
-        aktuelles_stueck_input = st.text_input("Gespieltes Hauptstück", placeholder="Titel und Komponist")
+        aktuelles_stueck_input = st.text_input("Gespieltes HauptstÃ¼ck", placeholder="Titel und Komponist")
     with col_stueck2:
-        konzert_stueck_input = st.text_input("Konzertstück · Vorspiel am 02.09.", placeholder="Ausgewähltes Vorspielstück")
+        konzert_stueck_input = st.text_input("KonzertstÃ¼ck Â· Vorspiel am 02.09.", placeholder="AusgewÃ¤hltes VorspielstÃ¼ck")
 
-    abschnitt("03 · Transfer", "Aufgaben und Vorbereitung", "Links steht der klare Übeauftrag für das Kind, rechts deine Vorbereitung für die nächste Stunde.")
+    abschnitt("03 Â· Transfer", "Aufgaben und Vorbereitung", "Links steht der klare Ãœbeauftrag fÃ¼r das Kind, rechts deine Vorbereitung fÃ¼r die nÃ¤chste Stunde.")
     col1, col2 = st.columns(2)
     with col1:
-        neue_hausaufgabe = st.text_area("Hausaufgabe für das Kind", placeholder="Konkret, kurz und gut überprüfbar formulieren", height=125)
+        neue_hausaufgabe = st.text_area("Hausaufgabe fÃ¼r das Kind", placeholder="Konkret, kurz und gut Ã¼berprÃ¼fbar formulieren", height=125)
     with col2:
-        neue_besprechung = st.text_area("Bis zur nächsten Stunde erledigen", placeholder="Noten, Material, Rückfragen oder organisatorische Punkte", height=125)
+        neue_besprechung = st.text_area("Bis zur nÃ¤chsten Stunde erledigen", placeholder="Noten, Material, RÃ¼ckfragen oder organisatorische Punkte", height=125)
 
-    abschnitt("04 · Würdigung", "Lobkärtchen", "Ein besonderer Erfolg wird wertschätzend festgehalten und kann später für TaskCards genutzt werden.")
+    abschnitt("04 Â· WÃ¼rdigung", "LobkÃ¤rtchen", "Ein besonderer Erfolg wird wertschÃ¤tzend festgehalten und kann spÃ¤ter fÃ¼r TaskCards genutzt werden.")
     _, col_lob_mitte, _ = st.columns([0.7, 3, 0.7])
     with col_lob_mitte:
-        lob_vergeben = st.checkbox("Für diese Stunde ein Lobkärtchen vergeben")
+        lob_vergeben = st.checkbox("FÃ¼r diese Stunde ein LobkÃ¤rtchen vergeben")
         if lob_vergeben:
-            grund = st.text_area("Persönliche Würdigung", placeholder="Was ist heute besonders gut gelungen?", height=105)
-            auf_taskcards = st.checkbox("Für die Veröffentlichung auf TaskCards vormerken", value=True)
+            grund = st.text_area("PersÃ¶nliche WÃ¼rdigung", placeholder="Was ist heute besonders gut gelungen?", height=105)
+            auf_taskcards = st.checkbox("FÃ¼r die VerÃ¶ffentlichung auf TaskCards vormerken", value=True)
         else:
             grund = ""
             auf_taskcards = False
 
     with st.expander("Meine Vorbereitung und internen Aufgaben", expanded=False):
-        aufgabe_1 = st.checkbox("Noten für die nächste Stunde heraussuchen und kopieren")
+        aufgabe_1 = st.checkbox("Noten fÃ¼r die nÃ¤chste Stunde heraussuchen und kopieren")
         aufgabe_2 = st.checkbox("TaskCards-Board aktualisieren")
         neue_lehrer_aufgabe = st.text_input("Weitere eigene Aufgabe", placeholder="Optional")
 
     st.markdown(
-        """<div class="save-panel"><div class="save-panel-title">Unterricht vollständig dokumentieren</div>
+        """<div class="save-panel"><div class="save-panel-title">Unterricht vollstÃ¤ndig dokumentieren</div>
         <div class="save-panel-copy">Technik, Repertoire, Aufgaben und Lob werden gemeinsam als ein Unterrichtseintrag gesichert.</div></div>""",
         unsafe_allow_html=True,
     )
     if st.button("Unterrichtseintrag speichern", type="primary", use_container_width=True):
-        st.success(f"Unterrichtseintrag für {student} am {unterrichtsdatum.strftime('%d.%m.%Y')} ist vollständig erfasst.")
-        st.caption("Die dauerhafte Übertragung in Google Sheets wird im nächsten Schritt angeschlossen.")
+        st.success(f"Unterrichtseintrag fÃ¼r {student} am {unterrichtsdatum.strftime('%d.%m.%Y')} ist vollstÃ¤ndig erfasst.")
+        st.caption("Die dauerhafte Ãœbertragung in Google Sheets wird im nÃ¤chsten Schritt angeschlossen.")
 
 with tab2:
     st.markdown("## Analyse & Fortschritt")
-    st.caption(f"Entwicklung und Jahresüberblick für {student}")
+    st.caption(f"Entwicklung und JahresÃ¼berblick fÃ¼r {student}")
 
     verlauf_daten = pd.DataFrame(
         {
@@ -583,12 +449,12 @@ with tab2:
         }
     )
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Archivierte Einträge", len(df_archiv[df_archiv["Schueler"] == student]))
+    kpi1.metric("Archivierte EintrÃ¤ge", len(df_archiv[df_archiv["Schueler"] == student]))
     kpi2.metric("Aktuelles Tempo", "128 BPM", "+18 BPM")
-    kpi3.metric("Erarbeitete Stücke", df_archiv[df_archiv["Schueler"] == student]["Stueck"].nunique())
-    kpi4.metric("Lobkärtchen", len(df_archiv[(df_archiv["Schueler"] == student) & (df_archiv["Kärtchen_Erhalten"] == "Ja")]))
+    kpi3.metric("Erarbeitete StÃ¼cke", df_archiv[df_archiv["Schueler"] == student]["Stueck"].nunique())
+    kpi4.metric("LobkÃ¤rtchen", len(df_archiv[(df_archiv["Schueler"] == student) & (df_archiv["KÃ¤rtchen_Erhalten"] == "Ja")]))
 
-    abschnitt("Jahresverlauf", "Tempo-Entwicklung", "Die Beispielkurve wird nach der Google-Sheets-Anbindung automatisch aus den Unterrichtseinträgen gespeist.")
+    abschnitt("Jahresverlauf", "Tempo-Entwicklung", "Die Beispielkurve wird nach der Google-Sheets-Anbindung automatisch aus den UnterrichtseintrÃ¤gen gespeist.")
     fig = px.line(verlauf_daten, x="Datum", y="Tempo", markers=True)
     fig.update_traces(line_color="#b8954b", line_width=3, marker=dict(size=9, color="#17243b"))
     fig.update_layout(
@@ -597,22 +463,22 @@ with tab2:
         font=dict(family="DM Sans", color="#263247"),
         margin=dict(l=20, r=20, t=20, b=20),
         xaxis_title=None,
-        yaxis_title="Tempo · BPM",
+        yaxis_title="Tempo Â· BPM",
         hovermode="x unified",
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    abschnitt("Archiv", "Alle Unterrichtseinträge", "Durchsuche und kontrolliere die bisher erfassten Daten.")
+    abschnitt("Archiv", "Alle UnterrichtseintrÃ¤ge", "Durchsuche und kontrolliere die bisher erfassten Daten.")
     st.dataframe(df_archiv, use_container_width=True, hide_index=True)
 
 with tab3:
     st.markdown("## Zertifikate & TaskCards")
-    st.caption(f"Persönlicher Jahresabschluss 2026 für {student}")
+    st.caption(f"PersÃ¶nlicher Jahresabschluss 2026 fÃ¼r {student}")
 
     info_col, action_col = st.columns([1.35, 1])
     with info_col:
-        abschnitt("Jahreszertifikat", "Fortschritt sichtbar würdigen", "Das Zertifikat bündelt erarbeitete Stücke und besondere Erfolge aus dem Archiv.")
-        st.info("Vor der Erstellung kannst du die Einträge im Analyse-Tab noch einmal kontrollieren.")
+        abschnitt("Jahreszertifikat", "Fortschritt sichtbar wÃ¼rdigen", "Das Zertifikat bÃ¼ndelt erarbeitete StÃ¼cke und besondere Erfolge aus dem Archiv.")
+        st.info("Vor der Erstellung kannst du die EintrÃ¤ge im Analyse-Tab noch einmal kontrollieren.")
     with action_col:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         zertifikat_erstellen = st.button("PDF-Zertifikat erstellen", type="primary", use_container_width=True)
@@ -631,6 +497,6 @@ with tab3:
             )
         with whatsapp_col:
             aktuelles_jahr = datetime.datetime.now().year
-            whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} für {student} aus der Klavierstunde."
+            whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} fÃ¼r {student} aus der Klavierstunde."
             whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(whatsapp_text)}"
-            st.link_button("Über WhatsApp teilen", whatsapp_url, use_container_width=True)
+            st.link_button("Ãœber WhatsApp teilen", whatsapp_url, use_container_width=True)
