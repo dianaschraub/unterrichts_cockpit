@@ -201,7 +201,7 @@ with tab1:
     
     st.markdown("""
         <div class="lob-box">
-            <h3 style="margin-top:0; color:#b8860b; text-align:center;">🏆 Lobkärtchen & TaskCards</h3>
+            <h3 style="margin-top:0; color:#b8860b; text-align:center;">🏆 Lobkärtchen</h3>
         </div>
     """, unsafe_allow_html=True)
     
