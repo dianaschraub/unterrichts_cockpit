@@ -154,4 +154,4 @@ with tab3:
             file_name=f"Zertifikat_{student}_{datetime.datetime.now().year}.pdf",
             mime="application/pdf"
         )
-        st.success("PDF wurde generiert
+        st.success("PDF wurde generiert") 
