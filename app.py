@@ -95,15 +95,38 @@ st.markdown("""
         background:#17243b !important; border-color:#17243b !important;
         color:#ffffff !important; box-shadow:0 5px 14px rgba(23,36,59,.2);
     }
-    .stButton>button {
+    [data-testid="stButton"] button, .stButton>button {
         border-radius: 10px; font-weight: 700; border: 1px solid var(--navy);
-        background: var(--navy); color: white; min-height: 44px;
+        background: var(--navy) !important; color: #ffffff !important; min-height: 44px;
         box-shadow: 0 5px 14px rgba(23,36,59,.14); transition: .18s ease;
     }
-    .stButton>button:hover { background: var(--navy-soft); color: white; border-color: var(--gold); transform: translateY(-1px); }
+    [data-testid="stButton"] button p, .stButton>button p { color: #ffffff !important; }
+    [data-testid="stButton"] button:hover, .stButton>button:hover {
+        background: var(--navy-soft) !important; color: #ffffff !important;
+        border-color: var(--gold); transform: translateY(-1px);
+    }
+    /* Deaktivierte Buttons (z.B. "Weiteres St\u00FCck" bei max. Anzahl) waren im Dark
+       Mode kaum lesbar, da Streamlit sonst eine sehr helle, blasse Textfarbe erzwingt. */
+    [data-testid="stButton"] button:disabled, .stButton>button:disabled,
+    [data-testid="stButton"] button[disabled], .stButton>button[disabled] {
+        background: #c7ccd6 !important; border-color: #b7bdc9 !important;
+        color: #46536b !important; opacity: 1 !important;
+    }
+    [data-testid="stButton"] button:disabled p, .stButton>button:disabled p,
+    [data-testid="stButton"] button[disabled] p, .stButton>button[disabled] p {
+        color: #46536b !important;
+    }
     [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea,
     [data-testid="stNumberInput"] input, [data-baseweb="select"] > div {
         background: rgba(255,255,255,.88); border-color: #d9d1c2; border-radius: 9px;
+    }
+    /* Platzhaltertext (z.B. "Link einf\u00FCgen") separat einf\u00E4rben: gut lesbar auf dem
+       hellen Feld, aber erkennbar heller/gr\u00E4ulicher als die sp\u00E4ter eingetippte Schrift. */
+    [data-testid="stTextInput"] input::placeholder,
+    [data-testid="stTextArea"] textarea::placeholder,
+    [data-testid="stNumberInput"] input::placeholder {
+        color: var(--muted) !important;
+        opacity: 1 !important;
     }
     .hero {
         background: linear-gradient(125deg, #17243b 0%, #263955 75%, #344967 100%);
@@ -1426,44 +1449,67 @@ if aktive_ansicht == "live":
         unterrichtsprogramm = "Noch keine St\u00FCcke eingetragen"
 
     besondere_programmkarten = ""
+    # Beide Kacheln werden defensiv in try/except gebaut: falls beim Erzeugen der
+    # Kachel (z.B. durch einen unerwarteten Datentyp) doch einmal ein Fehler auftritt,
+    # zeigt Streamlit sonst einen rohen Python-Fehler ("Code-Schnipsel") direkt im
+    # Cockpit an. So wird die Kachel im Fehlerfall einfach ausgelassen statt abzust\u00FCrzen.
     if programm_uebersicht["konzert_aktiv"]:
-        konzerttitel = " \u00B7 ".join(programm_uebersicht["konzert_stuecke"])
-        konzerttitel = konzerttitel or "Noch keine St\u00FCcke ausgew\u00E4hlt"
-        konzert_anmeldung = (
-            "angemeldet" if programm_uebersicht["konzert_angemeldet"] else "noch nicht angemeldet"
-        )
-        besondere_programmkarten += f"""
-            <div class="tablet-fact program-goal">
-                <div class="tablet-label">Konzertprogramm</div>
-                <div class="tablet-value">{html.escape(konzerttitel)}</div>
-                <div class="goal-countdown">
-                    {html.escape(berechne_ziel_countdown(programm_uebersicht['konzert_datum'], 'das Konzert'))}
-                </div>
-                <div class="goal-meta">
-                    Termin: {html.escape(datum_als_text(programm_uebersicht['konzert_datum']))} \u00B7
-                    {html.escape(konzert_anmeldung)}
-                </div>
-            </div>
-        """
+        try:
+            konzerttitel = " \u00B7 ".join(str(t) for t in programm_uebersicht["konzert_stuecke"])
+            konzerttitel = konzerttitel or "Noch keine St\u00FCcke ausgew\u00E4hlt"
+            konzert_anmeldung = (
+                "angemeldet" if programm_uebersicht["konzert_angemeldet"] else "noch nicht angemeldet"
+            )
+            konzert_countdown = html.escape(
+                berechne_ziel_countdown(programm_uebersicht["konzert_datum"], "das Konzert")
+            )
+            konzert_termin = html.escape(datum_als_text(programm_uebersicht["konzert_datum"]))
+            # Bewusst EIN einzeiliger String ohne f\u00FChrenden Zeilenumbruch/Einr\u00FCckung:
+            # sonst erkennt Streamlits Markdown-Parser den Block als eingerueckten
+            # Code-Block und zeigt die Tags als rohen Text an (siehe Bugreport).
+            besondere_programmkarten += (
+                '<div class="tablet-fact program-goal">'
+                '<div class="tablet-label">Konzertprogramm</div>'
+                f'<div class="tablet-value">{html.escape(konzerttitel)}</div>'
+                f'<div class="goal-countdown">{konzert_countdown}</div>'
+                f'<div class="goal-meta">Termin: {konzert_termin} \u00B7 '
+                f'{html.escape(konzert_anmeldung)}</div>'
+                '</div>'
+            )
+        except Exception:
+            besondere_programmkarten += (
+                '<div class="tablet-fact program-goal">'
+                '<div class="tablet-label">Konzertprogramm</div>'
+                '<div class="tablet-value">Wird geladen \u2026</div>'
+                '</div>'
+            )
     if programm_uebersicht["wettbewerb_aktiv"]:
-        wettbewerbstitel = " \u00B7 ".join(programm_uebersicht["wettbewerb_stuecke"])
-        wettbewerbstitel = wettbewerbstitel or "Noch keine St\u00FCcke ausgew\u00E4hlt"
-        wettbewerb_anmeldung = (
-            "angemeldet" if programm_uebersicht["wettbewerb_angemeldet"] else "noch nicht angemeldet"
-        )
-        besondere_programmkarten += f"""
-            <div class="tablet-fact program-goal">
-                <div class="tablet-label">Wettbewerbsprogramm</div>
-                <div class="tablet-value">{html.escape(wettbewerbstitel)}</div>
-                <div class="goal-countdown">
-                    {html.escape(berechne_ziel_countdown(programm_uebersicht['wettbewerb_datum'], 'der Wettbewerb'))}
-                </div>
-                <div class="goal-meta">
-                    Termin: {html.escape(datum_als_text(programm_uebersicht['wettbewerb_datum']))} \u00B7
-                    {html.escape(wettbewerb_anmeldung)}
-                </div>
-            </div>
-        """
+        try:
+            wettbewerbstitel = " \u00B7 ".join(str(t) for t in programm_uebersicht["wettbewerb_stuecke"])
+            wettbewerbstitel = wettbewerbstitel or "Noch keine St\u00FCcke ausgew\u00E4hlt"
+            wettbewerb_anmeldung = (
+                "angemeldet" if programm_uebersicht["wettbewerb_angemeldet"] else "noch nicht angemeldet"
+            )
+            wettbewerb_countdown = html.escape(
+                berechne_ziel_countdown(programm_uebersicht["wettbewerb_datum"], "der Wettbewerb")
+            )
+            wettbewerb_termin = html.escape(datum_als_text(programm_uebersicht["wettbewerb_datum"]))
+            besondere_programmkarten += (
+                '<div class="tablet-fact program-goal">'
+                '<div class="tablet-label">Wettbewerbsprogramm</div>'
+                f'<div class="tablet-value">{html.escape(wettbewerbstitel)}</div>'
+                f'<div class="goal-countdown">{wettbewerb_countdown}</div>'
+                f'<div class="goal-meta">Termin: {wettbewerb_termin} \u00B7 '
+                f'{html.escape(wettbewerb_anmeldung)}</div>'
+                '</div>'
+            )
+        except Exception:
+            besondere_programmkarten += (
+                '<div class="tablet-fact program-goal">'
+                '<div class="tablet-label">Wettbewerbsprogramm</div>'
+                '<div class="tablet-value">Wird geladen \u2026</div>'
+                '</div>'
+            )
 
     st.markdown(
         f"""
