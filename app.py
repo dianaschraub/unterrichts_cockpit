@@ -31,8 +31,12 @@ tab1, tab2, tab3 = st.tabs(["🎹 Cockpit", "📊 Analyse & Scan", "🏆 Zertifi
 
 with tab1:
     st.title("🎹 Klavierlehrer Cockpit")
-    student = "Emma" # Platzhalter für die Kalender-Erkennung
-    st.subheader(f"👤 Aktueller Unterricht: {student}")
+    
+    # FLEXIBLE SCHÜLER-AUSWAHL
+    schueler_liste = ["Emma", "Max", "Lina", "Julian", "Sophie"]
+    student = st.selectbox("👤 Wähle den aktuellen Schüler aus:", schueler_liste)
+    
+    st.subheader(f"Aktueller Unterricht: {student}")
     
     # Timer & Balken
     st.progress(0.45, text="Stunde läuft - Zeitbalken")
@@ -41,14 +45,11 @@ with tab1:
     with st.expander("🏆 Lobkärtchen vergeben & auf TaskCards teilen"):
         grund = st.text_input("Grund für das Lobkärtchen (z.B. Fantastischer Rhythmus!)")
         
-        # Checkbox: Soll es direkt zu TaskCards?
+        # Checkbox
         auf_taskcards = st.checkbox("Direkt auf dem TaskCards-Board des Schülers veröffentlichen", value=True)
         
         if st.button("Kärtchen vergeben & speichern"):
-            # 1. Ins Archiv schreiben
             st.success(f"Kärtchen für {student} im Archiv gespeichert!")
-            
-            # 2. TaskCards Benachrichtigung / Link simulieren
             if auf_taskcards:
                 st.info(f"🔗 Erfolgreich an TaskCards gesendet! Das Kind sieht die Auszeichnung beim nächsten Öffnen.")
 
@@ -75,7 +76,6 @@ with tab2:
 
 with tab3:
     st.title("🏆 Jahres-Zertifikate & TaskCards Übersicht")
-    st.write("Hier kannst du das Jahres-Zertifikat für den Schüler generieren, das alle gesammelten TaskCards-Lobkärtchen enthält.")
+    st.write(f"Hier kannst du das Jahres-Zertifikat für **{student}** generieren.")
     if st.button(f"Zertifikat für {student} als PDF erstellen"):
         st.success("PDF-Zertifikat wurde generiert und kann heruntergeladen werden!")
-
