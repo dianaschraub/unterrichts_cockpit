@@ -121,14 +121,28 @@ with tab1:
     
     st.markdown(f"### Unterricht mit: {student}")
     st.progress(0.45, text="Stunde läuft - Zeitbalken")
-    
+
     # --- ÜBUNGS- & ETIÜDEN-BEREICH ---
     st.markdown("---")
     st.markdown("### 🎹 Übungs- & Technik-Auswahl")
     
-    modus = st.radio("Wähle den Bereich:", ["Klassische Tonleitern", "Heft-Übungen (z.B. Tastenforscher)", "Fortgeschrittene Etüden"], horizontal=True)
+    modus = st.radio(
+        "Wähle den Bereich:", 
+        ["Tastenforscher", "Klassische Tonleitern", "Fortgeschrittene Etüden"], 
+        horizontal=True
+    )
     
-    if modus == "Klassische Tonleitern":
+    if modus == "Tastenforscher":
+        col_h1, col_h2, col_h3 = st.columns(3)
+        with col_h1:
+            heft_titel = st.text_input("Titel der Übung:", value="Tastenforscher")
+        with col_h2:
+            seiten_zahl = st.text_input("Seitenzahl:", value="Seite ")
+        with col_h3:
+            heft_link = st.text_input("Link zur Datei (Cloud/SSD):", value="")
+        speicher_text = f"Tastenforscher: '{heft_titel}' auf {seiten_zahl}"
+        
+    elif modus == "Klassische Tonleitern":
         col_t1, col_t2, col_t3 = st.columns(3)
         with col_t1:
             tonleiter_wahl = st.selectbox("Tonart / Tonleiter:", ["C-Dur", "G-Dur", "D-Dur", "A-Dur", "E-Dur", "F-Dur", "B-Dur", "Es-Dur", "A-Moll", "E-Moll", "D-Moll", "G-Moll"])
@@ -138,22 +152,12 @@ with tab1:
             tempo_wahl = st.slider("Tempo (BPM):", min_value=40, max_value=200, value=80, step=2)
         speicher_text = f"Tonleiter: {tonleiter_wahl} ({bewegung_wahl}) bei {tempo_wahl} BPM"
         
-    elif modus == "Heft-Übungen (z.B. Tastenforscher)":
-        col_h1, col_h2, col_h3 = st.columns(3)
-        with col_h1:
-            heft_titel = st.text_input("Titel der Übung / Heft:", value="Tastenforscher")
-        with col_h2:
-            seiten_zahl = st.text_input("Seitenzahl:", value="Seite ")
-        with col_h3:
-            heft_link = st.text_input("Link zur Datei (Cloud/SSD):", value="")
-        speicher_text = f"Heft: '{heft_titel}' auf {seiten_zahl}"
-        
     else:  # Fortgeschrittene Etüden
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
             etuede_titel = st.text_input("Etüde / Name:", value="z.B. Etüde op. 299")
         with col_e2:
-            komponist = st.text_input("Komponist:", value="Czerny / Chopin / Burgmüller")
+            komponist = st.text_input("Komponist:", value="Czerny / Chopin")
         with col_e3:
             opus_nr = st.text_input("Opus / Werknummer:", value="Op. 299, Nr. 6")
             
@@ -163,8 +167,9 @@ with tab1:
         with col_e5:
             etuede_tempo = st.number_input("Tempo (BPM):", min_value=40, max_value=250, value=100, step=2)
             
-        etuede_notizen = st.text_area("Weitere Notizen zur Etüde:", value="Fokus auf gleichmäßige Sechzehntel und Artikulation in der linken Hand.")
-        speicher_text = f"Etüde: '{etuede_titel}' ({komponist}, {opus_nr}) | Takte: {etuede_takte} | Tempo: {etuede_tempo} BPM"
+        etuede_notizen = st.text_area("Weitere Notizen:", value="Fokus auf Artikulation.")
+        speicher_text = f"Etüde: '{etuede_titel}'
+   
 
     aktuelles_stueck_input = st.text_input("Gespieltes Hauptstück:", value="Sonatine Opus 36")
     
