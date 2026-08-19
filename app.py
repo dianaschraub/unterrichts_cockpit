@@ -181,13 +181,11 @@ with tab1:
         neue_besprechung = st.text_input("Neuen Punkt für nächste Stunde:")
     
     with col2:
-        st.warning(f"**Hausaufgabe für das Kind:**\n* Takt 15-20 langsam üben")
+        st.warning(f"**Hausaufgabe:**\n* Takt 15-20 langsam üben")
         neue_hausaufgabe = st.text_input("Neue Hausaufgabe eintragen:")
 
     st.markdown("---")
-    st.markdown(f"### 📌 Meine Aufgaben für zu Hause")
-    aufgabe_1 = st.checkbox("Noten für die nächste Stunde raussuchen & kopieren", value=False)
-    aufgabe_2 = st.checkbox("TaskCards-Board aktualisieren", value=False)
+    st.markdown(f"### 📌 Meine Aufgaben für zu Hause") 
     neue_lehrer_aufgabe = st.text_input("Weitere eigene Aufgabe hinzufügen:")
     
     if st.button("💾 Alle Änderungen speichern"):
