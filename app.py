@@ -22,6 +22,16 @@ st.markdown("""
         border-left: 5px solid #ff4b4b;
         margin-bottom: 20px;
     }
+    /* Edle Box für das Lobkärtchen */
+    .lob-box {
+        background: linear-gradient(135deg, #fffdf0 0%, #fef5d1 100%);
+        border: 2px solid #d4af37;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+        max-width: 650px;
+        margin: 20px auto;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -46,12 +56,12 @@ def lade_archiv_aus_sheet():
     daten = {
         'Schueler': ['Emma', 'Max', 'Lina'],
         'Stueck': ['Sonatine Opus 36', 'Für Elise', 'Inventio 1'],
+        'Konzertstueck': ['Sonatine 1. Satz', 'Für Elise', 'Inventio 1'],
         'Dauer_Minuten': [45, 60, 30],
         'Schwierigkeit': [3, 4, 2],
         'Kärtchen_Erhalten': ['Ja', 'Nein', 'Ja'],
         'Grund': ['Toller Rhythmus im Takt 12', '', 'Wunderschöne Dynamik'],
-        'To_Do_Zuhause': ['Takt 15-20 langsam üben', 'Pedalwechsel weicher gestalten', 'Rhythmus klatschen'],
-        'Besprechung_Nächste_Stunde': ['Noten im Bassschlüssel wiederholen', 'Handhaltung prüfen', 'Dynamik im Mittelteil']
+        'Bis_Naechsten_Mal': ['Takt 15-20 langsam üben', 'Pedalwechsel weicher gestalten', 'Rhythmus klatschen']
     }
     return pd.DataFrame(daten)
 
@@ -166,37 +176,57 @@ with tab1:
         etuede_notizen = st.text_area("Weitere Notizen:", value="Fokus auf Artikulation.")
         speicher_text = f"Etüde: '{etuede_titel}' ({komponist}, {opus_nr}) | Takte: {etuede_takte} | Tempo: {etuede_tempo} BPM"
 
-    aktuelles_stueck_input = st.text_input("Gespieltes Hauptstück:", value="Sonatine Opus 36")
+    col_stueck1, col_stueck2 = st.columns(2)
+    with col_stueck1:
+        aktuelles_stueck_input = st.text_input("Gespieltes Hauptstück:", value="Sonatine Opus 36")
+    with col_stueck2:
+        konzert_stueck_input = st.text_input("🎯 Konzertstück (fürs Vorspiel 02.09.):", value="Sonatine 1. Satz")
     
     if st.button("💾 Übung & Stück ins Archiv eintragen"):
-        st.success(f"Gespeichert für {student}: {speicher_text} + Hauptstück '{aktuelles_stueck_input}'!")
+        st.success(f"Gespeichert für {student}: {speicher_text} | Hauptstück: '{aktuelles_stueck_input}' | Konzertstück: '{konzert_stueck_input}'!")
 
-    # Notizen
+    # --- NOTIZEN (Seiten getauscht: Links Hausaufgabe, Rechts Bis nächste Stunde) ---
     st.markdown("---")
     st.markdown("### 📝 Unterrichts- & Vorbereitungsnotizen")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.info(f"**Nächste Stunde besprechen:**\n* Noten im Bassschlüssel wiederholen\n* Handhaltung prüfen")
-        neue_besprechung = st.text_input("Neuen Punkt für nächste Stunde:")
+        neue_hausaufgabe = st.text_input("Hausaufgabe / To-Do für das Kind:")
     
     with col2:
-        st.warning(f"**Hausaufgabe:**\n* Takt 15-20 langsam üben")
-        neue_hausaufgabe = st.text_input("Neue Hausaufgabe eintragen:")
+        neue_besprechung = st.text_input("Bis zur nächsten Stunde erledigen:")
 
+    # --- NEU PLATZIERTES & EDEL GESTALTETES LOBKÄRTCHEN (Mittig, edler Rahmen) ---
     st.markdown("---")
-    st.markdown(f"### 📌 Meine Aufgaben für zu Hause") 
+    
+    st.markdown("""
+        <div class="lob-box">
+            <h3 style="margin-top:0; color:#b8860b; text-align:center;">🏆 Lobkärtchen & TaskCards</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Da Streamlit-Elemente in echtem HTML-Container schwer steuerbar sind, nutzen wir eine schmale zentrierte Spalte für den Inhalt
+    _, col_lob_mitte, _ = st.columns([1, 3, 1])
+    with col_lob_mitte:
+        grund = st.text_area(
+            "Grund für das Lobkärtchen:",
+            value="Fantastischer Rhythmus und wunderschöner Ausdruck im Mittelteil!",
+            height=90
+        )
+        auf_taskcards = st.checkbox("Direkt auf dem TaskCards-Board veröffentlichen", value=True)
+        
+        if st.button("✨ Lobkärtchen vergeben & speichern", use_container_width=True):
+            st.success(f"Lobkärtchen für {student} erfolgreich gespeichert und an TaskCards gesendet!")
+
+    # --- MEINE AUFGABEN ---
+    st.markdown("---")
+    st.markdown(f"### 📌 Meine Aufgaben für zu Hause")
+    aufgabe_1 = st.checkbox("Noten für die nächste Stunde raussuchen & kopieren", value=False)
+    aufgabe_2 = st.checkbox("TaskCards-Board aktualisieren", value=False)
     neue_lehrer_aufgabe = st.text_input("Weitere eigene Aufgabe hinzufügen:")
     
     if st.button("💾 Alle Änderungen speichern"):
         st.success("Erfolgreich im Hintergrund gespeichert!")
-    
-    with st.expander("🏆 Lobkärtchen vergeben & auf TaskCards teilen"):
-        grund = st.text_input("Grund für das Lobkärtchen (z.B. Fantastischer Rhythmus!)")
-        auf_taskcards = st.checkbox("Direkt auf dem TaskCards-Board des Schülers veröffentlichen", value=True)
-        
-        if st.button("✨ Kärtchen vergeben & ins Sheet schreiben"):
-            st.success(f"Kärtchen for {student} gespeichert und an TaskCards gesendet!")
 
 with tab2:
     st.markdown("## 📊 Analyse & Fortschritt")
