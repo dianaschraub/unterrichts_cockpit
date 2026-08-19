@@ -1,6 +1,8 @@
+
 import streamlit as st
 import pandas as pd
 import datetime
+import plotly.express as px
 from sklearn.cluster import DBSCAN
 from fpdf import FPDF
 
@@ -23,18 +25,8 @@ def berechne_konzert_countdown():
     else:
         return "Das Klassenvorspiel in diesem Jahr ist bereits vorbei."
 
-# --- DATEN-LOGIK (Verbindung zum Google Sheet vorbereitet) ---
+# --- DATEN-LOGIK ---
 def lade_archiv_aus_sheet():
-    # Sobald die Google-Secrets hinterlegt sind, zieht sich die App hier 
-    # die echten Daten aus deinem Google Sheet "Unterrichtscockpit Archiv".
-    # Bis dahin nutzen wir die Struktur als Basis:
-    try:
-        # Platzhalter für den Google Sheets Connector
-        pass
-    except:
-        pass
-        
-    # Basis-Struktur mit allen deinen geforderten Spalten
     daten = {
         'Schueler': ['Emma', 'Max', 'Lina'],
         'Stueck': ['Sonatine Opus 36', 'Für Elise', 'Inventio 1'],
@@ -47,11 +39,7 @@ def lade_archiv_aus_sheet():
     }
     return pd.DataFrame(daten)
 
-# --- KALENDER-ERKENNUNG (Platzhalter für Google Calendar API) ---
 def get_aktueller_schueler_aus_kalender():
-    # Hier greift später die automatische Kalender-Abfrage.
-    # Gibt aktuell None zurück, damit das Fallback (Auswahl) greift, 
-    # solange die API-Verbindung noch nicht aktiv ist.
     return None
 
 # --- ZERTIFIKAT FUNKTION ---
@@ -90,11 +78,9 @@ tab1, tab2, tab3 = st.tabs(["🎹 Cockpit & Countdown", "📊 Analyse & Scan", "
 with tab1:
     st.title("🎹 Klavierlehrer Cockpit")
     
-    # 1. KONZERT COUNTDOWN
     st.markdown(f"### {berechne_konzert_countdown()}")
     st.markdown("---")
     
-    # 2. SCHÜLER- ERKENNUNG (Kalender oder manuelle Auswahl)
     erkennter_schueler = get_aktueller_schueler_aus_kalender()
     
     if erkennter_schueler:
@@ -107,7 +93,6 @@ with tab1:
     st.subheader(f"Aktueller Unterricht: {student}")
     st.progress(0.45, text="Stunde läuft - Zeitbalken")
     
-    # 3. NOTIZEN & HAUSAUFGABEN (Für die nächste Stunde / zu Hause)
     st.markdown("### 📝 Notizen & Vorbereitung")
     col1, col2 = st.columns(2)
     
@@ -122,7 +107,6 @@ with tab1:
     if st.button("Notizen & Hausaufgaben im Sheet speichern"):
         st.success(f"Gespeichert! Die Notizen für {student} wurden ins Google Sheet übertragen.")
     
-    # 4. LOBKÄRTCHEN & TASKCARDS
     with st.expander("🏆 Lobkärtchen vergeben & auf TaskCards teilen"):
         grund = st.text_input("Grund für das Lobkärtchen (z.B. Fantastischer Rhythmus!)")
         auf_taskcards = st.checkbox("Direkt auf dem TaskCards-Board des Schülers veröffentlichen", value=True)
@@ -130,7 +114,7 @@ with tab1:
         if st.button("Kärtchen vergeben & ins Sheet schreiben"):
             st.success(f"Kärtchen für {student} im Google Sheet Archiv gespeichert!")
             if auf_taskcards:
-                st.info(f"🔗 Erfolgreich an TaskCards gesendet!")
+                st.info("🔗 Erfolgreich an TaskCards gesendet!")
 
 with tab2:
     st.title("📊 Analyse & Dichte-Scan")
@@ -154,4 +138,4 @@ with tab3:
             file_name=f"Zertifikat_{student}_{datetime.datetime.now().year}.pdf",
             mime="application/pdf"
         )
-        st.success("PDF wurde generiert") 
+        st.success("PDF wurde generiert!")
