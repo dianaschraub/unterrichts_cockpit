@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from sklearn.cluster import DBSCAN
@@ -40,4 +41,5 @@ with tab2:
 with tab3:
     st.title("🏆 Zertifikate")
     st.write(f"Zertifikat für {student} generieren.")
+
 
