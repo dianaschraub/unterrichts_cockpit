@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import datetime
@@ -7,6 +8,12 @@ from fpdf import FPDF
 
 # --- SETUP & KONFIGURATION ---
 st.set_page_config(page_title="Klavierlehrer Cockpit", layout="wide")
+
+# --- ECHTE KALENDER-ERKENNUNG ---
+def get_aktueller_schueler():
+    # Hier wird später die echte Google Kalender API Abfrage stattfinden.
+    # Aktuell gibt sie None zurück, um das Auswahlmenü zu triggern.
+    return None 
 
 # --- CORE FUNKTIONEN ---
 def erstelle_zertifikat_pdf(student, df_archiv):
@@ -32,26 +39,28 @@ tab1, tab2, tab3 = st.tabs(["🎹 Cockpit", "📊 Analyse & Scan", "🏆 Zertifi
 with tab1:
     st.title("🎹 Klavierlehrer Cockpit")
     
-    # FLEXIBLE SCHÜLER-AUSWAHL
-    schueler_liste = ["Emma", "Max", "Lina", "Julian", "Sophie"]
-    student = st.selectbox("👤 Wähle den aktuellen Schüler aus:", schueler_liste)
+    # Automatische Schüler-Erkennung
+    gefundener_schueler = get_aktueller_schueler()
+    
+    if gefundener_schueler:
+        student = gefundener_schueler
+        st.success(f"👤 Aktueller Schüler aus Kalender erkannt: {student}")
+    else:
+        # Fallback: Dropdown
+        schueler_liste = ["Emma", "Max", "Lina", "Julian", "Sophie"]
+        student = st.selectbox("👤 Kein Kalender-Termin gefunden. Wähle manuell:", schueler_liste)
     
     st.subheader(f"Aktueller Unterricht: {student}")
     
     # Timer & Balken
     st.progress(0.45, text="Stunde läuft - Zeitbalken")
     
-    # --- LOBKÄRTCHEN & TASKCARDS KOMBI ---
+    # --- LOBKÄRTCHEN ---
     with st.expander("🏆 Lobkärtchen vergeben & auf TaskCards teilen"):
-        grund = st.text_input("Grund für das Lobkärtchen (z.B. Fantastischer Rhythmus!)")
-        
-        # Checkbox
-        auf_taskcards = st.checkbox("Direkt auf dem TaskCards-Board des Schülers veröffentlichen", value=True)
-        
-        if st.button("Kärtchen vergeben & speichern"):
-            st.success(f"Kärtchen für {student} im Archiv gespeichert!")
-            if auf_taskcards:
-                st.info(f"🔗 Erfolgreich an TaskCards gesendet! Das Kind sieht die Auszeichnung beim nächsten Öffnen.")
+        grund = st.text_input("Grund für das Lobkärtchen")
+        auf_taskcards = st.checkbox("Direkt auf TaskCards veröffentlichen", value=True)
+        if st.button("Kärtchen speichern"):
+            st.success(f"Kärtchen für {student} gespeichert!")
 
 with tab2:
     st.title("📊 Analyse & Dichte-Scan")
@@ -63,19 +72,13 @@ with tab2:
         'Grund': ['Dynamik', '', 'Rhythmus']
     })
     
-    # DBSCAN Cluster-Analyse
     db = DBSCAN(eps=0.5, min_samples=2).fit(df_archiv[['Dauer_Minuten', 'Schwierigkeit']])
     df_archiv['Cluster'] = db.labels_
     
-    fig = px.scatter(
-        df_archiv, x="Dauer_Minuten", y="Schwierigkeit", 
-        color="Cluster", symbol="Kärtchen_Erhalten", 
-        hover_name="Schueler", title="Lern-Cluster & Kärtchen-Goldpunkte"
-    )
+    fig = px.scatter(df_archiv, x="Dauer_Minuten", y="Schwierigkeit", color="Cluster", symbol="Kärtchen_Erhalten", hover_name="Schueler")
     st.plotly_chart(fig)
 
 with tab3:
-    st.title("🏆 Jahres-Zertifikate & TaskCards Übersicht")
-    st.write(f"Hier kannst du das Jahres-Zertifikat für **{student}** generieren.")
-    if st.button(f"Zertifikat für {student} als PDF erstellen"):
-        st.success("PDF-Zertifikat wurde generiert und kann heruntergeladen werden!")
+    st.title("🏆 Jahres-Zertifikate")
+    if st.button(f"Zertifikat für {student} erstellen"):
+        st.success("PDF wurde generiert!")
