@@ -130,6 +130,18 @@ st.markdown("""
         margin-top:4px; overflow-wrap:anywhere;
     }
     .tablet-note { color:#dfe5ec; font-size:10px; line-height:1.2; margin-top:3px; }
+    .goal-countdown {
+        color:#fff; font-size:13px; font-weight:800; line-height:1.25; margin-top:5px;
+    }
+    .goal-meta { color:#dfe5ec; font-size:10px; line-height:1.25; margin-top:2px; }
+    .program-countdown {
+        display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px;
+        margin:5px 0 8px; padding:7px 9px; border-radius:8px;
+        background:#f6ecd4; border:1px solid #d8bd7e; color:#17243b;
+        font-size:12px; line-height:1.3;
+    }
+    .program-countdown strong { font-weight:800; }
+    .program-countdown span { white-space:nowrap; }
     .compact-head { margin:4px 0 8px; }
     .compact-kicker {
         color:var(--gold); font-size:10px; font-weight:800;
@@ -232,6 +244,7 @@ st.markdown("""
         .tablet-overview { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; padding:6px; }
         .tablet-brand { grid-column:1 / -1; }
         .tablet-brand, .tablet-fact { padding:7px 8px; }
+        .tablet-fact.program-goal { grid-column:1 / -1; }
         .tablet-title { font-size:18px; }
         .tablet-value { font-size:13px; }
     }
@@ -251,15 +264,19 @@ def berechne_ziel_countdown(zieldatum, ziel_name):
     if tage >= 14:
         wochen = tage // 7
         rest_tage = tage % 7
-        tage_text = f" und {rest_tage} Tag" if rest_tage == 1 else f" und {rest_tage} Tage"
-        return f"Noch {wochen} Wochen{tage_text if rest_tage else ''}"
+        tage_text = (
+            f" und {rest_tage}\u00A0Tag"
+            if rest_tage == 1
+            else f" und {rest_tage}\u00A0Tage"
+        )
+        return f"Noch {wochen}\u00A0Wochen{tage_text if rest_tage else ''}"
     if tage > 1:
-        return f"Noch {tage} Tage"
+        return f"Noch {tage}\u00A0Tage"
     if tage == 1:
         return "Morgen"
     if tage == 0:
         return f"Heute ist {ziel_name}!"
-    return f"{ziel_name} war vor {abs(tage)} Tagen"
+    return f"{ziel_name} war vor {abs(tage)}\u00A0Tagen"
 
 def datum_als_text(zieldatum):
     if isinstance(zieldatum, datetime.date):
@@ -268,6 +285,15 @@ def datum_als_text(zieldatum):
 
 def datum_als_iso(zieldatum):
     return zieldatum.isoformat() if isinstance(zieldatum, datetime.date) else ""
+
+def zeige_zieltermin(zieldatum, ziel_name):
+    countdown = html.escape(berechne_ziel_countdown(zieldatum, ziel_name))
+    termin = html.escape(datum_als_text(zieldatum))
+    st.markdown(
+        f'<div class="program-countdown"><strong>{countdown}</strong>'
+        f'<span>Termin: {termin}</span></div>',
+        unsafe_allow_html=True,
+    )
 
 def berechne_fortschritt_unterricht(start_minute=0, dauer=45):
     """Platzhalter f\u00FCr die sp\u00E4tere automatische Kalender-/Zeiterkennung."""
@@ -636,7 +662,9 @@ def zeige_repertoirebereich(student, stundenende):
         )
     tabelle["Nr."] = range(1, len(tabelle) + 1)
 
-    st.caption("Unterrichtsprogramm Â· diese Liste ist der Normalfall und gilt fÃ¼r die laufende Arbeit.")
+    st.caption(
+        "Unterrichtsprogramm \u00B7 diese Liste gilt f\u00FCr die laufende Arbeit."
+    )
 
     bearbeitet = st.data_editor(
         tabelle,
@@ -678,8 +706,6 @@ def zeige_repertoirebereich(student, stundenende):
             use_container_width=True,
             key=f"stueck_entfernen_{repertoire_schluessel(student)}",
         )
-    st.caption(f"{anzahl} von maximal 7 Unterrichtsst\u00FCcken")
-
     titel_indices = []
     for index, zeile in bearbeitet.iterrows():
         titel = "" if pd.isna(zeile["Titel"]) else str(zeile["Titel"]).strip()
@@ -697,22 +723,21 @@ def zeige_repertoirebereich(student, stundenende):
         zeile = bearbeitet.iloc[index]
         titel = str(zeile["Titel"]).strip()
         komponist = "" if pd.isna(zeile["Komponist"]) else str(zeile["Komponist"]).strip()
-        zusatz = f" Â· {komponist}" if komponist else ""
+        zusatz = f" \u00B7 {komponist}" if komponist else ""
         return f"{index + 1}. {titel}{zusatz}"
 
-    st.markdown("**Besondere Programme Â· nur einschalten, wenn sie wirklich bestehen**")
     konzert_schalter, wettbewerb_schalter = st.columns(2)
     with konzert_schalter:
         konzert_aktiv = st.checkbox(
             "Konzertprogramm",
             key=keys["konzert_aktiv"],
-            help="Erst danach erscheinen KonzertstÃ¼cke, Termin und Anmeldung.",
+            help="Erst danach erscheinen Konzertst\u00FCcke, Termin und Anmeldung.",
         )
     with wettbewerb_schalter:
         wettbewerb_aktiv = st.checkbox(
             "Wettbewerbsprogramm",
             key=keys["wettbewerb_aktiv"],
-            help="Erst danach erscheinen WettbewerbsstÃ¼cke, Termin und Anmeldung.",
+            help="Erst danach erscheinen Wettbewerbsst\u00FCcke, Termin und Anmeldung.",
         )
 
     konzert_stuecke = []
@@ -722,13 +747,13 @@ def zeige_repertoirebereich(student, stundenende):
         with st.container(border=True):
             st.markdown("**Konzertprogramm**")
             if not titel_indices:
-                st.caption("Zuerst oben mindestens ein UnterrichtsstÃ¼ck mit Titel eintragen.")
+                st.caption("Zuerst oben mindestens ein Unterrichtsst\u00FCck mit Titel eintragen.")
             konzert_stuecke = st.multiselect(
-                "StÃ¼cke fÃ¼r das Konzert",
+                "St\u00FCcke f\u00FCr das Konzert",
                 options=titel_indices,
                 format_func=stueck_bezeichnung,
                 key=keys["konzert_stuecke"],
-                placeholder="Aus dem Unterrichtsprogramm auswÃ¤hlen",
+                placeholder="Aus dem Unterrichtsprogramm ausw\u00E4hlen",
             )
             konzert_datum = st.date_input(
                 "Konzerttermin",
@@ -736,10 +761,7 @@ def zeige_repertoirebereich(student, stundenende):
                 format="DD.MM.YYYY",
                 key=keys["konzert_datum"],
             )
-            st.caption(
-                f"{berechne_ziel_countdown(konzert_datum, 'das Konzert')} Â· "
-                f"Termin: {datum_als_text(konzert_datum)}"
-            )
+            zeige_zieltermin(konzert_datum, "das Konzert")
             konzert_angemeldet = st.checkbox(
                 "Konzertprogramm ist angemeldet",
                 key=keys["konzert_angemeldet"],
@@ -752,13 +774,13 @@ def zeige_repertoirebereich(student, stundenende):
         with st.container(border=True):
             st.markdown("**Wettbewerbsprogramm**")
             if not titel_indices:
-                st.caption("Zuerst oben mindestens ein UnterrichtsstÃ¼ck mit Titel eintragen.")
+                st.caption("Zuerst oben mindestens ein Unterrichtsst\u00FCck mit Titel eintragen.")
             wettbewerb_stuecke = st.multiselect(
-                "StÃ¼cke fÃ¼r den Wettbewerb",
+                "St\u00FCcke f\u00FCr den Wettbewerb",
                 options=titel_indices,
                 format_func=stueck_bezeichnung,
                 key=keys["wettbewerb_stuecke"],
-                placeholder="Aus dem Unterrichtsprogramm auswÃ¤hlen",
+                placeholder="Aus dem Unterrichtsprogramm ausw\u00E4hlen",
             )
             wettbewerb_datum = st.date_input(
                 "Wettbewerbstermin",
@@ -766,10 +788,7 @@ def zeige_repertoirebereich(student, stundenende):
                 format="DD.MM.YYYY",
                 key=keys["wettbewerb_datum"],
             )
-            st.caption(
-                f"{berechne_ziel_countdown(wettbewerb_datum, 'der Wettbewerb')} Â· "
-                f"Termin: {datum_als_text(wettbewerb_datum)}"
-            )
+            zeige_zieltermin(wettbewerb_datum, "der Wettbewerb")
             wettbewerb_angemeldet = st.checkbox(
                 "Wettbewerbsprogramm ist angemeldet",
                 key=keys["wettbewerb_angemeldet"],
@@ -875,21 +894,25 @@ def zeige_transferbereich(student):
     )
     return neue_hausaufgabe, neue_besprechung
 
-def zeige_lobbereich():
-    kompakt_titel("04 \u00B7 W\u00FCrdigung", "Lobk\u00E4rtchen f\u00FCr das Kind")
+def zeige_lobbereich(student):
+    schuelername = str(student).strip() or "Sch\u00FCler"
+    schueler_key = repertoire_schluessel(schuelername)
+    kompakt_titel(
+        "04 \u00B7 W\u00FCrdigung",
+        f"Lobk\u00E4rtchen f\u00FCr {schuelername}",
+    )
     lob_vergeben = st.checkbox(
         "Lobk\u00E4rtchen jetzt erstellen",
-        key="lob_vergeben",
+        key=f"lob_vergeben_{schueler_key}",
     )
     if lob_vergeben:
         grund = st.text_input(
             "Grund f\u00FCr das Lobk\u00E4rtchen",
             placeholder="Was ist heute besonders gut gelungen?",
-            key="lob_grund",
+            key=f"lob_grund_{schueler_key}",
         )
     else:
         grund = ""
-    st.caption("Das Lobk\u00E4rtchen geh\u00F6rt ausschlie\u00DFlich zum Kind und wird direkt erstellt.")
     return lob_vergeben, grund
 
 def speichere_zwischenstand(entwurf):
@@ -1375,9 +1398,11 @@ if aktive_ansicht == "live":
             <div class="tablet-fact program-goal">
                 <div class="tablet-label">Konzertprogramm</div>
                 <div class="tablet-value">{html.escape(konzerttitel)}</div>
-                <div class="tablet-note">
-                    {html.escape(datum_als_text(programm_uebersicht['konzert_datum']))} Â·
-                    {html.escape(berechne_ziel_countdown(programm_uebersicht['konzert_datum'], 'das Konzert'))} Â·
+                <div class="goal-countdown">
+                    {html.escape(berechne_ziel_countdown(programm_uebersicht['konzert_datum'], 'das Konzert'))}
+                </div>
+                <div class="goal-meta">
+                    Termin: {html.escape(datum_als_text(programm_uebersicht['konzert_datum']))} \u00B7
                     {html.escape(konzert_anmeldung)}
                 </div>
             </div>
@@ -1392,9 +1417,11 @@ if aktive_ansicht == "live":
             <div class="tablet-fact program-goal">
                 <div class="tablet-label">Wettbewerbsprogramm</div>
                 <div class="tablet-value">{html.escape(wettbewerbstitel)}</div>
-                <div class="tablet-note">
-                    {html.escape(datum_als_text(programm_uebersicht['wettbewerb_datum']))} Â·
-                    {html.escape(berechne_ziel_countdown(programm_uebersicht['wettbewerb_datum'], 'der Wettbewerb'))} Â·
+                <div class="goal-countdown">
+                    {html.escape(berechne_ziel_countdown(programm_uebersicht['wettbewerb_datum'], 'der Wettbewerb'))}
+                </div>
+                <div class="goal-meta">
+                    Termin: {html.escape(datum_als_text(programm_uebersicht['wettbewerb_datum']))} \u00B7
                     {html.escape(wettbewerb_anmeldung)}
                 </div>
             </div>
@@ -1406,7 +1433,6 @@ if aktive_ansicht == "live":
             <div class="tablet-brand">
                 <div class="tablet-kicker">Digitales Unterrichtsstudio</div>
                 <div class="tablet-title">Klavierlehrer Live-Cockpit</div>
-                <div class="tablet-note">Unterrichtsprogramm zuerst Â· besondere Ziele nur bei Bedarf</div>
             </div>
             <div class="tablet-fact">
                 <div class="tablet-label">Aktueller Sch\u00FCler</div>
@@ -1429,21 +1455,20 @@ if aktive_ansicht == "live":
         unsafe_allow_html=True,
     )
 
-    technik_spalte, repertoire_spalte = st.columns([0.93, 1.07])
-    with technik_spalte:
+    linke_cockpit_spalte, rechte_cockpit_spalte = st.columns(
+        [0.93, 1.07],
+        gap="small",
+    )
+    with linke_cockpit_spalte:
         with st.container(border=True):
             modus, speicher_text = zeige_technikbereich()
-    with repertoire_spalte:
-        with st.container(border=True):
-            repertoire_eintraege, programm_status = zeige_repertoirebereich(student, stundenende)
-
-    transfer_spalte, lob_spalte = st.columns([1, 1])
-    with transfer_spalte:
         with st.container(border=True):
             neue_hausaufgabe, neue_besprechung = zeige_transferbereich(student)
-    with lob_spalte:
+    with rechte_cockpit_spalte:
         with st.container(border=True):
-            lob_vergeben, grund = zeige_lobbereich()
+            repertoire_eintraege, programm_status = zeige_repertoirebereich(student, stundenende)
+        with st.container(border=True):
+            lob_vergeben, grund = zeige_lobbereich(student)
 
     entwurf = {
         "Sch\u00FCler": str(student),
