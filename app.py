@@ -33,11 +33,31 @@ st.markdown("""
     .block-container { max-width: 1280px; padding-top: 1.4rem; padding-bottom: 3rem; }
     h1, h2, h3 { font-family: 'Playfair Display', serif !important; color: var(--navy) !important; }
     [data-baseweb="tab-list"] {
-        gap: 8px; background: rgba(255,255,255,.72); padding: 7px;
+        gap: 8px; background: #fffdf8; padding: 7px;
         border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(23,36,59,.06);
     }
-    [data-baseweb="tab"] { border-radius: 9px; padding: 10px 18px; font-weight: 650; }
-    [data-baseweb="tab"][aria-selected="true"] { background: var(--navy) !important; color: white !important; }
+    [data-baseweb="tab"] {
+        flex: 1 1 0; min-height: 50px; border: 1px solid #d8d0c1;
+        border-radius: 9px; padding: 10px 18px; background: #f7f4ed !important;
+        color: var(--navy) !important; font-size: 15px !important; font-weight: 800 !important;
+        line-height: 1.25 !important; white-space: normal !important;
+    }
+    [data-baseweb="tab"] *,
+    [data-baseweb="tab"] p,
+    [data-baseweb="tab"] span {
+        color: var(--navy) !important; font-size: 15px !important;
+        font-weight: 800 !important; opacity: 1 !important;
+    }
+    [data-baseweb="tab"][aria-selected="true"] {
+        background: var(--navy) !important; border-color: var(--navy) !important;
+        color: #ffffff !important;
+    }
+    [data-baseweb="tab"][aria-selected="true"] *,
+    [data-baseweb="tab"][aria-selected="true"] p,
+    [data-baseweb="tab"][aria-selected="true"] span {
+        color: #ffffff !important;
+    }
+    [data-baseweb="tab-highlight"] { display: none !important; }
     .stButton>button {
         border-radius: 10px; font-weight: 700; border: 1px solid var(--navy);
         background: var(--navy); color: white; min-height: 44px;
@@ -126,7 +146,16 @@ st.markdown("""
         .hero:after { font-size: 95px; right: 14px; }
         .summary-card { min-height: 116px; padding: 14px; }
         .summary-value { font-size: 19px; }
-        [data-baseweb="tab"] { padding: 9px 11px; font-size: 13px; }
+        [data-baseweb="tab-list"] { gap: 5px; padding: 5px; }
+        [data-baseweb="tab"] {
+            min-height: 54px; padding: 8px 7px; font-size: 12px !important;
+        }
+        [data-baseweb="tab"] *,
+        [data-baseweb="tab"] p,
+        [data-baseweb="tab"] span {
+            font-size: 12px !important; line-height: 1.2 !important;
+            text-align: center !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
