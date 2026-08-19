@@ -547,3 +547,4 @@ with tab3:
             whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} f\u00FCr {student} aus der Klavierstunde."
             whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(whatsapp_text)}"
             st.link_button("\u00DCber WhatsApp teilen", whatsapp_url, use_container_width=True)
+            
