@@ -9,6 +9,8 @@ import plotly.express as px
 from zoneinfo import ZoneInfo
 from fpdf import FPDF
 import urllib.parse
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 try:
     from streamlit_gsheets import GSheetsConnection
