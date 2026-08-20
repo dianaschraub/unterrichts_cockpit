@@ -2,6 +2,10 @@
 import streamlit as st
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
+def get_calendar_service():
+    creds = Credentials.from_authorized_user_info(st.secrets["google_oauth"])
+    return build('calendar', 'v3', credentials=creds)
+
 import streamlit.components.v1 as components
 import pandas as pd
 import datetime
@@ -18,6 +22,7 @@ try:
     from streamlit_gsheets import GSheetsConnection
 except ImportError:
     GSheetsConnection = None
+
 
 # --- SETUP & DESIGN-KONFIGURATION ---
 st.set_page_config(page_title="Klavierlehrer Cockpit", layout="wide", page_icon="\U0001F3B9")
