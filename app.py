@@ -69,6 +69,13 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
     [data-testid="stSidebar"] label { color: var(--ink) !important; }
     .block-container { max-width: 1280px; padding-top: 4.8rem; padding-bottom: 1.2rem; }
+    /* Bordered Container (01 Technik / 03 Aufgaben) enger zusammenr\u00FCcken, damit
+       beide Rubriken links auf einer Bildschirmseite Platz finden. */
+    [data-testid="stVerticalBlockBorderWrapper"] { margin-bottom: 4px !important; }
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {
+        gap: 0.45rem !important;
+    }
+    .compact-head { margin: 2px 0 4px !important; }
     h1, h2, h3 { font-family: 'Playfair Display', serif !important; color: var(--navy) !important; }
     .cockpit-nav {
         display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
@@ -95,13 +102,17 @@ st.markdown("""
         background:#17243b !important; border-color:#17243b !important;
         color:#ffffff !important; box-shadow:0 5px 14px rgba(23,36,59,.2);
     }
-    [data-testid="stButton"] button, .stButton>button {
+    [data-testid="stButton"] button, .stButton>button,
+    [data-testid="stDownloadButton"] button, [data-testid="stLinkButton"] a {
         border-radius: 10px; font-weight: 700; border: 1px solid var(--navy);
         background: var(--navy) !important; color: #ffffff !important; min-height: 44px;
         box-shadow: 0 5px 14px rgba(23,36,59,.14); transition: .18s ease;
     }
-    [data-testid="stButton"] button p, .stButton>button p { color: #ffffff !important; }
-    [data-testid="stButton"] button:hover, .stButton>button:hover {
+    [data-testid="stButton"] button p, .stButton>button p,
+    [data-testid="stDownloadButton"] button p, [data-testid="stLinkButton"] a p,
+    [data-testid="stLinkButton"] a span { color: #ffffff !important; }
+    [data-testid="stButton"] button:hover, .stButton>button:hover,
+    [data-testid="stDownloadButton"] button:hover, [data-testid="stLinkButton"] a:hover {
         background: var(--navy-soft) !important; color: #ffffff !important;
         border-color: var(--gold); transform: translateY(-1px);
     }
@@ -118,7 +129,12 @@ st.markdown("""
     }
     [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea,
     [data-testid="stNumberInput"] input, [data-baseweb="select"] > div {
-        background: rgba(255,255,255,.88); border-color: #d9d1c2; border-radius: 9px;
+        background: rgba(255,255,255,.88) !important; border: 1.5px solid #d9d1c2 !important;
+        border-radius: 9px !important;
+    }
+    [data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stNumberInput"] input:focus, [data-baseweb="select"]:focus-within > div {
+        border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) !important;
     }
     /* Platzhaltertext (z.B. "Link einf\u00FCgen") separat einf\u00E4rben: gut lesbar auf dem
        hellen Feld, aber erkennbar heller/gr\u00E4ulicher als die sp\u00E4ter eingetippte Schrift. */
@@ -439,7 +455,7 @@ def weiteres_stueck_hinzufuegen(student):
             ignore_index=True,
         )
     tabelle = tabelle.iloc[:anzahl].reset_index(drop=True)
-    tabelle["Nr."] = range(1, len(tabelle) + 1)
+    tabelle["Nr."] = [str(n) for n in range(1, len(tabelle) + 1)]
     st.session_state[keys["tabelle"]] = tabelle
     st.session_state[keys["anzahl"]] = anzahl
 
@@ -452,7 +468,7 @@ def letztes_stueck_entfernen(student):
         leere_repertoire_tabelle(bisherige_anzahl),
     ).copy()
     tabelle = tabelle.iloc[:anzahl].reset_index(drop=True)
-    tabelle["Nr."] = range(1, len(tabelle) + 1)
+    tabelle["Nr."] = [str(n) for n in range(1, len(tabelle) + 1)]
     st.session_state[keys["tabelle"]] = tabelle
     st.session_state[keys["anzahl"]] = anzahl
 
@@ -559,6 +575,61 @@ def speichere_unterrichtspaket(archiv_zeile, repertoire_zeilen):
         "Repertoire": repertoire_zeilen,
     }
     return speichere_in_google_sheets(archiv_zeile, repertoire_zeilen)
+
+def lade_taskcards_link(student):
+    """Liest den dauerhaft gespeicherten TaskCards-Link f\u00FCr einen Sch\u00FCler
+    aus dem Arbeitsblatt 'Schueler_Profile'. Gibt einen leeren String zur\u00FCck,
+    falls (noch) nichts hinterlegt ist oder keine Verbindung besteht."""
+    if GSheetsConnection is None:
+        return ""
+    try:
+        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        profile = verbindung.read(worksheet="Schueler_Profile", ttl=0)
+        if profile is None or profile.empty or "Sch\u00FCler" not in profile.columns:
+            return ""
+        treffer = profile.loc[
+            profile["Sch\u00FCler"].fillna("").astype(str) == str(student)
+        ]
+        if treffer.empty or "TaskCards_Link" not in treffer.columns:
+            return ""
+        wert = treffer.iloc[-1]["TaskCards_Link"]
+        return "" if pd.isna(wert) else str(wert).strip()
+    except Exception:
+        return ""
+
+def speichere_taskcards_link(student, link):
+    """Schreibt den TaskCards-Link dauerhaft in das Arbeitsblatt 'Schueler_Profile'
+    (ein Arbeitsblatt mit den Spalten Sch\u00FCler / TaskCards_Link / Gespeichert_am
+    muss in der verbundenen Google-Sheets-Datei existieren). Legt f\u00FCr den
+    Sch\u00FCler eine neue Zeile an oder aktualisiert die bestehende."""
+    if GSheetsConnection is None:
+        return False
+    try:
+        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        profile = verbindung.read(worksheet="Schueler_Profile", ttl=0)
+        if profile is None or profile.empty:
+            profile = pd.DataFrame(columns=["Sch\u00FCler", "TaskCards_Link", "Gespeichert_am"])
+        else:
+            profile = profile.copy()
+        for spalte in ["Sch\u00FCler", "TaskCards_Link", "Gespeichert_am"]:
+            if spalte not in profile.columns:
+                profile[spalte] = ""
+        zeitpunkt = datetime.datetime.now(ZoneInfo("Europe/Berlin")).isoformat(timespec="seconds")
+        maske = profile["Sch\u00FCler"].fillna("").astype(str) == str(student)
+        if maske.any():
+            profile.loc[maske, "TaskCards_Link"] = link
+            profile.loc[maske, "Gespeichert_am"] = zeitpunkt
+        else:
+            neue_zeile = pd.DataFrame([{
+                "Sch\u00FCler": str(student),
+                "TaskCards_Link": link,
+                "Gespeichert_am": zeitpunkt,
+            }])
+            profile = pd.concat([profile, neue_zeile], ignore_index=True)
+        verbindung.update(worksheet="Schueler_Profile", data=profile)
+        return True
+    except Exception:
+        return False
 
 def kompakt_titel(nummer, titel):
     st.markdown(
@@ -721,7 +792,7 @@ def zeige_repertoirebereich(student, stundenende):
             [tabelle, leere_repertoire_tabelle(1, startnummer=len(tabelle) + 1)],
             ignore_index=True,
         )
-    tabelle["Nr."] = range(1, len(tabelle) + 1)
+    tabelle["Nr."] = [str(n) for n in range(1, len(tabelle) + 1)]
 
     st.caption(
         "Unterrichtsprogramm \u00B7 diese Liste gilt f\u00FCr die laufende Arbeit."
@@ -735,7 +806,7 @@ def zeige_repertoirebereich(student, stundenende):
         disabled=["Nr."],
         key=f"repertoire_editor_{repertoire_schluessel(student)}_{anzahl}",
         column_config={
-            "Nr.": st.column_config.NumberColumn("Nr.", width="small"),
+            "Nr.": st.column_config.TextColumn("Nr.", width="small"),
             "Titel": st.column_config.TextColumn("Titel", width="medium"),
             "Komponist": st.column_config.TextColumn("Komponist", width="small"),
             "Cloud-Link": st.column_config.TextColumn(
@@ -745,7 +816,7 @@ def zeige_repertoirebereich(student, stundenende):
             ),
         },
     )
-    bearbeitet["Nr."] = range(1, len(bearbeitet) + 1)
+    bearbeitet["Nr."] = [str(n) for n in range(1, len(bearbeitet) + 1)]
     st.session_state[keys["tabelle"]] = bearbeitet.copy()
 
     knopf_hinzufuegen, knopf_entfernen = st.columns(2)
@@ -944,15 +1015,27 @@ def zeige_transferbereich(student):
     neue_hausaufgabe = st.text_area(
         f"Hausaufgabe \u00B7 f\u00FCr {schuelername}",
         placeholder="Konkret und kurz formulieren",
-        height=82,
+        height=72,
         key=f"transfer_hausaufgabe_{schueler_key}",
     )
     neue_besprechung = st.text_area(
         "Bis zur n\u00E4chsten Stunde erledigen \u00B7 meine Aufgabe",
         placeholder="Meine Vorbereitung, Noten oder organisatorische Punkte",
-        height=82,
+        height=72,
         key=f"transfer_vorbereitung_{schueler_key}",
     )
+    if neue_hausaufgabe.strip():
+        heute_text = datetime.date.today().strftime("%d.%m.%Y")
+        eltern_text = (
+            f"Hausaufgabe f\u00FCr {schuelername} vom Klavierunterricht ({heute_text}):\n\n"
+            f"{neue_hausaufgabe.strip()}"
+        )
+        eltern_whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(eltern_text)}"
+        st.link_button(
+            "Hausaufgabe per WhatsApp an Eltern schicken",
+            eltern_whatsapp_url,
+            use_container_width=True,
+        )
     return neue_hausaufgabe, neue_besprechung
 
 def zeige_lobbereich(student):
@@ -1685,6 +1768,63 @@ elif aktive_ansicht == "analyse":
 elif aktive_ansicht == "zertifikate":
     st.markdown("## Zertifikate & TaskCards")
     st.caption(f"Pers\u00F6nlicher Jahresabschluss 2026 f\u00FCr {student}")
+
+    schueler_key_taskcards = repertoire_schluessel(student)
+    taskcards_link_key = f"taskcards_link_{schueler_key_taskcards}"
+    # Beim ersten Aufruf f\u00FCr diesen Sch\u00FCler in dieser Sitzung den dauerhaft
+    # gespeicherten Link aus Google Sheets als Vorbelegung laden.
+    if taskcards_link_key not in st.session_state:
+        st.session_state[taskcards_link_key] = lade_taskcards_link(student)
+
+    abschnitt(
+        "TaskCards",
+        "Profil des Sch\u00FClers",
+        "Link zum TaskCards-Profil hinterlegen \u2013 er wird dauerhaft in Google "
+        "Sheets gespeichert und kann im Unterricht direkt ge\u00F6ffnet oder als "
+        "QR-Code gescannt werden.",
+    )
+    link_spalte, qr_spalte = st.columns([1.3, 1])
+    with link_spalte:
+        taskcards_link = st.text_input(
+            f"TaskCards-Link f\u00FCr {student}",
+            placeholder="https://www.taskcards.de/...",
+            key=taskcards_link_key,
+        )
+        letzter_link = st.session_state.get(f"{taskcards_link_key}_gespeichert", "")
+        if taskcards_link != letzter_link:
+            if ist_gueltiger_cloud_link(taskcards_link) or not taskcards_link:
+                if speichere_taskcards_link(student, taskcards_link):
+                    st.session_state[f"{taskcards_link_key}_gespeichert"] = taskcards_link
+        if ist_gueltiger_cloud_link(taskcards_link):
+            st.link_button(
+                "TaskCards-Profil \u00F6ffnen",
+                taskcards_link,
+                use_container_width=True,
+            )
+            if GSheetsConnection is not None:
+                st.caption("\u2713 Dauerhaft gespeichert")
+        elif taskcards_link:
+            st.warning("Das sieht nicht nach einem g\u00FCltigen Link aus (mit https:// beginnen).")
+        else:
+            st.caption("Noch kein Link hinterlegt.")
+    with qr_spalte:
+        if ist_gueltiger_cloud_link(taskcards_link):
+            qr_bild_url = (
+                "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data="
+                + urllib.parse.quote(taskcards_link, safe="")
+            )
+            st.markdown(
+                f'<div style="text-align:center;">'
+                f'<img src="{html.escape(qr_bild_url, quote=True)}" '
+                f'alt="QR-Code zum TaskCards-Profil" width="200" '
+                f'style="border-radius:10px;border:1px solid var(--line);padding:8px;'
+                f'background:#fff;">'
+                f'<div style="font-size:12px;color:var(--muted);margin-top:6px;">'
+                f'Sch\u00FCler kann diesen Code direkt scannen</div></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("Der QR-Code erscheint automatisch, sobald ein g\u00FCltiger Link eingetragen ist.")
 
     info_col, action_col = st.columns([1.35, 1])
     with info_col:
