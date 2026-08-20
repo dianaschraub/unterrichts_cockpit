@@ -561,8 +561,9 @@ def speichere_in_google_sheets(archiv_zeile, repertoire_zeilen):
             )
             verbindung.update(worksheet="Repertoire", data=repertoire_aktuell)
         return True
-    except Exception:
-        return False
+    except Exception as fehler:
+        st.session_state["kalender_fehler"] = str(fehler)
+        return None
 
 def speichere_unterrichtspaket(archiv_zeile, repertoire_zeilen):
     """Hält Archiv und Repertoire getrennt und schreibt sie in ihre Zielblätter."""
