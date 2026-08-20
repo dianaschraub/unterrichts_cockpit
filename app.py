@@ -1456,7 +1456,7 @@ def erstelle_tagesleisten_html(termine, jetzt=None):
     bausteine.append("</div>")
     return "".join(bausteine)
 
-def formatiere_naechsten_termin(termin, kalender_verbunden=False):
+def formatiere_naechsten_termin(termin, kalender_verbunden=True):
     if not termin and not kalender_verbunden:
         return "Noch nicht verbunden", "Google Kalender wird im n\u00E4chsten Schritt angeschlossen"
     if not termin:
