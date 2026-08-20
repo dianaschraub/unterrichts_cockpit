@@ -1324,9 +1324,61 @@ def hole_konzertprogramm(student, archiv):
         return "Noch nicht festgelegt"
     return " \u00B7 ".join(dict.fromkeys(auswahl))
 
+KALENDER_SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
+@st.cache_data(ttl=60)
+def _lade_kalender_rohdaten(datum_iso):
+    """Holt die Termine eines Tages von der Google Calendar API.
+    Gibt None zurück, wenn keine Secrets hinterlegt sind oder ein Fehler auftritt."""
+    if "gcp_service_account" not in st.secrets:
+        return None
+    try:
+        creds = service_account.Credentials.from_service_account_info(
+            dict(st.secrets["gcp_service_account"]), scopes=KALENDER_SCOPES
+        )
+        dienst = build("calendar", "v3", credentials=creds)
+        kalender_id = st.secrets.get("kalender_id", "primary")
+
+        tz = ZoneInfo("Europe/Berlin")
+        tag = datetime.date.fromisoformat(datum_iso)
+        tag_start = datetime.datetime.combine(tag, datetime.time.min, tzinfo=tz)
+        tag_ende = datetime.datetime.combine(tag, datetime.time.max, tzinfo=tz)
+
+        ergebnis = dienst.events().list(
+            calendarId=kalender_id,
+            timeMin=tag_start.isoformat(),
+            timeMax=tag_ende.isoformat(),
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+        return ergebnis.get("items", [])
+    except Exception:
+        return None
+
 def get_heutige_unterrichtstermine_aus_kalender():
-    """Liefert nach der Google-Anbindung Termine als Name-, Start- und Ende-Dicts."""
-    return None
+    """Liefert die heutigen Kalendertermine als Liste von Name-, Start- und Ende-Dicts."""
+    rohdaten = _lade_kalender_rohdaten(datetime.date.today().isoformat())
+    if rohdaten is None:
+        return None
+
+    tz = ZoneInfo("Europe/Berlin")
+    termine = []
+    for termin in rohdaten:
+        start_info = termin.get("start", {})
+        ende_info = termin.get("end", {})
+        if "dateTime" not in start_info or "dateTime" not in ende_info:
+            continue
+        try:
+            start = datetime.datetime.fromisoformat(start_info["dateTime"]).astimezone(tz)
+            ende = datetime.datetime.fromisoformat(ende_info["dateTime"]).astimezone(tz)
+        except ValueError:
+            continue
+        termine.append({
+            "name": termin.get("summary", "Ohne Titel"),
+            "start": start,
+            "ende": ende,
+        })
+    return termine
 
 def finde_aktuellen_und_naechsten_termin(termine, jetzt=None):
     if not termine:
