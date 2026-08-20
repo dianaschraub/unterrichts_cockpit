@@ -1335,7 +1335,6 @@ KALENDER_SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 @st.cache_data(ttl=60)
 def _lade_kalender_rohdaten(datum_iso):
-    return None
     """Holt die Termine eines Tages von der Google Calendar API.
     Gibt None zurück, wenn keine Secrets hinterlegt sind oder ein Fehler auftritt."""
     if "gcp_service_account" not in st.secrets:
