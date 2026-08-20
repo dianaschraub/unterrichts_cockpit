@@ -1,5 +1,7 @@
 # Klavierlehrer Live-Cockpit
 import streamlit as st
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
 import streamlit.components.v1 as components
 import pandas as pd
 import datetime
