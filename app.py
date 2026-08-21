@@ -1,11 +1,5 @@
 # Klavierlehrer Live-Cockpit
 import streamlit as st
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
-def get_calendar_service():
-    creds = Credentials.from_authorized_user_info(st.secrets["google_oauth"])
-    return build('calendar', 'v3', credentials=creds)
-
 import streamlit.components.v1 as components
 import pandas as pd
 import datetime
@@ -561,9 +555,8 @@ def speichere_in_google_sheets(archiv_zeile, repertoire_zeilen):
             )
             verbindung.update(worksheet="Repertoire", data=repertoire_aktuell)
         return True
-    except Exception as fehler:
-        st.session_state["kalender_fehler"] = str(fehler)
-        return None
+    except Exception:
+        return False
 
 def speichere_unterrichtspaket(archiv_zeile, repertoire_zeilen):
     """Hält Archiv und Repertoire getrennt und schreibt sie in ihre Zielblätter."""
@@ -1360,7 +1353,8 @@ def _lade_kalender_rohdaten(datum_iso):
             orderBy="startTime",
         ).execute()
         return ergebnis.get("items", [])
-    except Exception:
+    except Exception as fehler:
+        st.session_state["kalender_fehler"] = str(fehler)
         return None
 
 def get_heutige_unterrichtstermine_aus_kalender():
@@ -1511,6 +1505,10 @@ df_archiv = lade_archiv_aus_sheet()
 schueler_liste = df_archiv["Schueler"].dropna().unique().tolist()
 jetzt = datetime.datetime.now(ZoneInfo("Europe/Berlin"))
 heutige_termine = get_heutige_unterrichtstermine_aus_kalender()
+
+if "kalender_fehler" in st.session_state:
+    st.error(f"Kalender-Fehler: {st.session_state['kalender_fehler']}")
+
 aktueller_termin, naechster_termin = finde_aktuellen_und_naechsten_termin(heutige_termine, jetzt)
 erkennter_schueler = aktueller_termin["name"] if aktueller_termin else None
 naechster_titel, naechster_hinweis = formatiere_naechsten_termin(
