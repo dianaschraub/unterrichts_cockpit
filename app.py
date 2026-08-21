@@ -11,6 +11,7 @@ from fpdf import FPDF
 import urllib.parse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+import base64
 
 try:
     from streamlit_gsheets import GSheetsConnection
@@ -1327,15 +1328,32 @@ def hole_konzertprogramm(student, archiv):
 
 KALENDER_SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
+def _hole_service_account_info():
+    """Liest die Dienstkonto-Zugangsdaten aus den Secrets.
+    Unterstützt zwei Formate: eine Base64-kodierte komplette JSON-Datei
+    (Secret 'gcp_service_account_b64', robust gegen Tipp-/Copy-Fehler auf
+    Mobilgeräten) oder den klassischen TOML-Abschnitt [gcp_service_account]."""
+    if "gcp_service_account_b64" in st.secrets:
+        try:
+            roh_text = base64.b64decode(st.secrets["gcp_service_account_b64"]).decode("utf-8")
+            return json.loads(roh_text)
+        except Exception as fehler:
+            st.session_state["kalender_fehler"] = f"Base64/JSON-Fehler: {fehler}"
+            return None
+    if "gcp_service_account" in st.secrets:
+        return dict(st.secrets["gcp_service_account"])
+    return None
+
 @st.cache_data(ttl=60)
 def _lade_kalender_rohdaten(datum_iso):
     """Holt die Termine eines Tages von der Google Calendar API.
     Gibt None zurück, wenn keine Secrets hinterlegt sind oder ein Fehler auftritt."""
-    if "gcp_service_account" not in st.secrets:
+    service_account_info = _hole_service_account_info()
+    if service_account_info is None:
         return None
     try:
         creds = service_account.Credentials.from_service_account_info(
-            dict(st.secrets["gcp_service_account"]), scopes=KALENDER_SCOPES
+            service_account_info, scopes=KALENDER_SCOPES
         )
         dienst = build("calendar", "v3", credentials=creds)
         kalender_id = st.secrets.get("kalender_id", "primary")
