@@ -1641,8 +1641,14 @@ def hole_wochentermine(anzahl_tage=7):
         woche[tag] = sorted(termine, key=lambda t: t["start"])
     return woche
 
-def springe_zu_schueler(name):
+def springe_zu_schueler(name, termin=None, datum=None):
     st.session_state["manuell_gewaehlter_schueler"] = name
+    ziel_datum = termin["start"].date() if termin is not None else (datum or datetime.date.today())
+    st.session_state["manuell_gewaehltes_datum"] = ziel_datum.isoformat()
+    if termin is not None:
+        st.session_state["manuell_gewaehlte_dauer"] = int((termin["ende"] - termin["start"]).total_seconds() // 60)
+    elif "manuell_gewaehlte_dauer" in st.session_state:
+        del st.session_state["manuell_gewaehlte_dauer"]
     st.session_state["zentraler_schueler_sprung"] = name
     st.rerun()
 
@@ -1670,7 +1676,7 @@ def zeige_heutige_liste(termine, jetzt):
             key=f'jump_heute_{termin["start"].isoformat()}',
             use_container_width=True,
         ):
-            springe_zu_schueler(termin["name"])
+            springe_zu_schueler(termin["name"], termin=termin)
 
 def zeige_wochenuebersicht(woche):
     """Kompakte Spalten-\u00DCbersicht der n\u00E4chsten Tage. Ein Klick auf einen
@@ -1696,7 +1702,7 @@ def zeige_wochenuebersicht(woche):
                     key=f'jump_woche_{tag.isoformat()}_{termin["start"].isoformat()}',
                     use_container_width=True,
                 ):
-                    springe_zu_schueler(termin["name"])
+                    springe_zu_schueler(termin["name"], termin=termin)
 
 def hole_meine_vorbereitungen(df_archiv, wochentermine):
     """Ermittelt pro Sch\u00FCler die zuletzt eingetragene, noch nicht abgehakte
@@ -1886,14 +1892,23 @@ else:
 
         if manuell_gesprungen:
             student = manuell_gesprungen
-            unterrichtsdatum = datetime.date.today()
-            dauer_minuten = 45
-            stundenende = jetzt + datetime.timedelta(minutes=dauer_minuten)
-            st.info(f"Manuell ausgew\u00E4hlt: {student}")
+            datum_iso = st.session_state.get("manuell_gewaehltes_datum")
+            try:
+                unterrichtsdatum = datetime.date.fromisoformat(datum_iso) if datum_iso else datetime.date.today()
+            except ValueError:
+                unterrichtsdatum = datetime.date.today()
+            dauer_minuten = st.session_state.get("manuell_gewaehlte_dauer", 45)
+            stundenende = jetzt + datetime.timedelta(minutes=int(dauer_minuten))
+            st.info(f"Manuell ausgew\u00E4hlt: {student} \u00B7 {unterrichtsdatum.strftime('%d.%m.%Y')}")
             if st.button("Zur\u00FCck zur automatischen Erkennung", use_container_width=True):
-                del st.session_state["manuell_gewaehlter_schueler"]
-                if "zentraler_schueler_sprung" in st.session_state:
-                    del st.session_state["zentraler_schueler_sprung"]
+                for schluessel in (
+                    "manuell_gewaehlter_schueler",
+                    "manuell_gewaehltes_datum",
+                    "manuell_gewaehlte_dauer",
+                    "zentraler_schueler_sprung",
+                ):
+                    if schluessel in st.session_state:
+                        del st.session_state[schluessel]
                 st.rerun()
         elif fokus_termin:
             student = fokus_termin["name"]
