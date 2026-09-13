@@ -1,145 +1,3 @@
-                archiv_zeile,
-                repertoire_zum_speichern,
-            )
-            st.success(
-                f"Unterrichtseintrag f\u00FCr {student} am "
-                f"{unterrichtsdatum.strftime('%d.%m.%Y')} wurde gespeichert."
-            )
-            if dauerhaft_gespeichert:
-                st.caption(
-                    "Technik, Aufgaben und Lob wurden in Google Sheets im Blatt "
-                    "Unterrichtsarchiv gespeichert; "
-                    f"{len(repertoire_zum_speichern)} St\u00FCck(e) wurden mit Cloud-Link, "
-                    "Verwendung und Anmeldestatus im Blatt Repertoire gespeichert."
-                )
-            else:
-                st.warning(
-                    "Der Eintrag ist im ge\u00F6ffneten Cockpit gesichert, konnte aber nicht "
-                    "dauerhaft an Google Sheets \u00FCbertragen werden. Bitte pr\u00FCfe die "
-                    "eingerichtete gsheets-Verbindung und das Zusatzpaket streamlit-gsheets."
-                )
-
-elif aktive_ansicht == "analyse":
-    st.markdown("## Analyse & Fortschritt")
-    st.caption(f"Entwicklung und Jahres\u00FCberblick f\u00FCr {student}")
-
-    verlauf_daten = pd.DataFrame(
-        {
-            "Datum": ["2026-01-10", "2026-03-15", "2026-05-05", "2026-07-20", "2026-08-18"],
-            "Tempo": [60, 72, 90, 110, 128],
-            "Tonart": ["C-Dur"] * 5,
-        }
-    )
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Archivierte Eintr\u00E4ge", len(df_archiv[df_archiv["Schueler"] == student]))
-    kpi2.metric("Aktuelles Tempo", "128 BPM", "+18 BPM")
-    kpi3.metric("Erarbeitete St\u00FCcke", df_archiv[df_archiv["Schueler"] == student]["Stueck"].nunique())
-    kpi4.metric("Lobk\u00E4rtchen", len(df_archiv[(df_archiv["Schueler"] == student) & (df_archiv["K\u00E4rtchen_Erhalten"] == "Ja")]))
-
-    abschnitt("Jahresverlauf", "Tempo-Entwicklung", "Die Beispielkurve wird nach der Google-Sheets-Anbindung automatisch aus den Unterrichtseintr\u00E4gen gespeist.")
-    fig = px.line(verlauf_daten, x="Datum", y="Tempo", markers=True)
-    fig.update_traces(line_color="#b8954b", line_width=3, marker=dict(size=9, color="#17243b"))
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(255,253,248,.7)",
-        font=dict(family="DM Sans", color="#263247"),
-        margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title=None,
-        yaxis_title="Tempo \u00B7 BPM",
-        hovermode="x unified",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    abschnitt("Archiv", "Alle Unterrichtseintr\u00E4ge", "Durchsuche und kontrolliere die bisher erfassten Daten.")
-    st.dataframe(df_archiv, use_container_width=True, hide_index=True)
-
-elif aktive_ansicht == "zertifikate":
-    st.markdown("## Zertifikate & TaskCards")
-    st.caption(f"Pers\u00F6nlicher Jahresabschluss 2026 f\u00FCr {student}")
-
-    schueler_key_taskcards = repertoire_schluessel(student)
-    taskcards_link_key = f"taskcards_link_{schueler_key_taskcards}"
-    # Beim ersten Aufruf f\u00FCr diesen Sch\u00FCler in dieser Sitzung den dauerhaft
-    # gespeicherten Link aus Google Sheets als Vorbelegung laden.
-    if taskcards_link_key not in st.session_state:
-        st.session_state[taskcards_link_key] = lade_taskcards_link(student)
-
-    abschnitt(
-        "TaskCards",
-        "Profil des Sch\u00FClers",
-        "Link zum TaskCards-Profil hinterlegen \u2013 er wird dauerhaft in Google "
-        "Sheets gespeichert und kann im Unterricht direkt ge\u00F6ffnet oder als "
-        "QR-Code gescannt werden.",
-    )
-    link_spalte, qr_spalte = st.columns([1.3, 1])
-    with link_spalte:
-        taskcards_link = st.text_input(
-            f"TaskCards-Link f\u00FCr {student}",
-            placeholder="https://www.taskcards.de/...",
-            key=taskcards_link_key,
-        )
-        letzter_link = st.session_state.get(f"{taskcards_link_key}_gespeichert", "")
-        if taskcards_link != letzter_link:
-            if ist_gueltiger_cloud_link(taskcards_link) or not taskcards_link:
-                if speichere_taskcards_link(student, taskcards_link):
-                    st.session_state[f"{taskcards_link_key}_gespeichert"] = taskcards_link
-        if ist_gueltiger_cloud_link(taskcards_link):
-            st.link_button(
-                "TaskCards-Profil \u00F6ffnen",
-                taskcards_link,
-                use_container_width=True,
-            )
-            if GSheetsConnection is not None:
-                st.caption("\u2713 Dauerhaft gespeichert")
-        elif taskcards_link:
-            st.warning("Das sieht nicht nach einem g\u00FCltigen Link aus (mit https:// beginnen).")
-        else:
-            st.caption("Noch kein Link hinterlegt.")
-    with qr_spalte:
-        if ist_gueltiger_cloud_link(taskcards_link):
-            qr_bild_url = (
-                "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data="
-                + urllib.parse.quote(taskcards_link, safe="")
-            )
-            st.markdown(
-                f'<div style="text-align:center;">'
-                f'<img src="{html.escape(qr_bild_url, quote=True)}" '
-                f'alt="QR-Code zum TaskCards-Profil" width="200" '
-                f'style="border-radius:10px;border:1px solid var(--line);padding:8px;'
-                f'background:#fff;">'
-                f'<div style="font-size:12px;color:var(--muted);margin-top:6px;">'
-                f'Sch\u00FCler kann diesen Code direkt scannen</div></div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.caption("Der QR-Code erscheint automatisch, sobald ein g\u00FCltiger Link eingetragen ist.")
-
-    info_col, action_col = st.columns([1.35, 1])
-    with info_col:
-        abschnitt("Jahreszertifikat", "Fortschritt sichtbar w\u00FCrdigen", "Das Zertifikat b\u00FCndelt erarbeitete St\u00FCcke und besondere Erfolge aus dem Archiv.")
-        st.info("Vor der Erstellung kannst du die Eintr\u00E4ge im Analyse-Tab noch einmal kontrollieren.")
-    with action_col:
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-        zertifikat_erstellen = st.button("PDF-Zertifikat erstellen", type="primary", use_container_width=True)
-
-    if zertifikat_erstellen:
-        pdf_daten = erstelle_zertifikat_pdf(student, df_archiv)
-        st.success("Das Zertifikat ist bereit.")
-        download_col, whatsapp_col = st.columns(2)
-        with download_col:
-            st.download_button(
-                label="PDF herunterladen",
-                data=pdf_daten,
-                file_name=f"Zertifikat_{student}_{datetime.datetime.now().year}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-        with whatsapp_col:
-            aktuelles_jahr = datetime.datetime.now().year
-            whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} f\u00FCr {student} aus der Klavierstunde."
-            whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(whatsapp_text)}"
-            st.link_button("\u00DCber WhatsApp teilen", whatsapp_url, use_container_width=True)
-
 # Klavierlehrer Live-Cockpit
 import streamlit as st
 import streamlit.components.v1 as components
@@ -1671,6 +1529,7 @@ if "kalender_fehler" in st.session_state:
 
 aktueller_termin, naechster_termin = finde_aktuellen_und_naechsten_termin(heutige_termine, jetzt)
 erkennter_schueler = aktueller_termin["name"] if aktueller_termin else None
+ist_automatisch_erkannt = bool(erkennter_schueler)
 naechster_titel, naechster_hinweis = formatiere_naechsten_termin(
     naechster_termin,
     kalender_verbunden=heutige_termine is not None,
@@ -1746,6 +1605,13 @@ navigation_html += "</nav>"
 st.markdown(navigation_html, unsafe_allow_html=True)
 
 if aktive_ansicht == "live":
+    if ist_automatisch_erkannt:
+        aktueller_schueler_anzeige = str(student)
+        aktueller_schueler_hinweis = f"{unterrichtsdatum.strftime('%d.%m.%Y')} · {dauer_minuten} Minuten"
+    else:
+        aktueller_schueler_anzeige = "Kein Termin aktiv"
+        aktueller_schueler_hinweis = "Schüler unten manuell auswählen"
+
     programm_uebersicht = hole_programm_uebersicht(student)
     unterrichtsprogramm = " \u00B7 ".join(programm_uebersicht["unterricht"])
     if not unterrichtsprogramm:
@@ -1823,8 +1689,8 @@ if aktive_ansicht == "live":
             </div>
             <div class="tablet-fact">
                 <div class="tablet-label">Aktueller Sch\u00FCler</div>
-                <div class="tablet-value">{html.escape(str(student))}</div>
-                <div class="tablet-note">{unterrichtsdatum.strftime('%d.%m.%Y')} \u00B7 {dauer_minuten} Minuten</div>
+                <div class="tablet-value">{html.escape(aktueller_schueler_anzeige)}</div>
+                <div class="tablet-note">{html.escape(aktueller_schueler_hinweis)}</div>
             </div>
             <div class="tablet-fact">
                 <div class="tablet-label">Unterrichtsprogramm heute</div>
