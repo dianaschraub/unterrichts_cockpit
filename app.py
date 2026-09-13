@@ -1012,9 +1012,75 @@ def zeige_repertoirebereich(student, stundenende):
     }
     return repertoire_eintraege, programm_status
 
-def zeige_transferbereich(student):
+def zeige_uebe_zaehler(schueler_key, kontext_text, hausaufgabe_feld_key):
+    """Kleines Zusatz-Tool 'Finger und K\u00F6pfchen': z\u00E4hlt fehlerfreie
+    Wiederholungen beim \u00DCben einer Stelle hoch bzw. runter. Das Ergebnis
+    kann direkt ins Hausaufgabenfeld des Sch\u00FClers \u00FCbernommen werden."""
+    offen_key = f"uebezaehler_offen_{schueler_key}"
+    if offen_key not in st.session_state:
+        st.session_state[offen_key] = False
+
+    knopf_text = "\U0001F3AF \u00DCbe-Z\u00E4hler schlie\u00DFen" if st.session_state[offen_key] else "\U0001F3AF \u00DCbe-Z\u00E4hler \u00F6ffnen"
+    if st.button(knopf_text, key=f"uebezaehler_toggle_{schueler_key}"):
+        st.session_state[offen_key] = not st.session_state[offen_key]
+
+    if not st.session_state[offen_key]:
+        return
+
+    zustand_key = f"uebezaehler_zustand_{schueler_key}"
+    if zustand_key not in st.session_state:
+        st.session_state[zustand_key] = {"ziel": 5, "start_ziel": 5, "fehler": 0}
+    zustand = st.session_state[zustand_key]
+
+    with st.container(border=True):
+        st.markdown("**\U0001F3AF \u00DCbe-Z\u00E4hler \u2013 Finger und K\u00F6pfchen**")
+        neues_startziel = st.slider(
+            "Ziel-Wiederholungen",
+            min_value=5,
+            max_value=15,
+            value=zustand["start_ziel"],
+            key=f"uebezaehler_startziel_{schueler_key}",
+        )
+        if neues_startziel != zustand["start_ziel"]:
+            zustand["start_ziel"] = neues_startziel
+            zustand["ziel"] = neues_startziel
+            zustand["fehler"] = 0
+
+        if zustand["ziel"] <= 0:
+            st.success("Geschafft! \U0001F389 Alle Wiederholungen fehlerfrei gespielt.")
+        else:
+            st.info(f"Noch **{zustand['ziel']}** fehlerfreie Wiederholungen n\u00F6tig.")
+        if zustand["fehler"]:
+            st.caption(f"Dabei {zustand['fehler']} Fehlversuch(e).")
+
+        knopf_richtig, knopf_falsch, knopf_reset = st.columns(3)
+        if knopf_richtig.button("\u2705 Fehlerfrei", key=f"uebezaehler_ok_{schueler_key}", use_container_width=True):
+            zustand["ziel"] = max(0, zustand["ziel"] - 1)
+        if knopf_falsch.button("\u274C Fehler", key=f"uebezaehler_fehler_{schueler_key}", use_container_width=True):
+            zustand["ziel"] += 1
+            zustand["fehler"] += 1
+        if knopf_reset.button("\U0001F504 Neu starten", key=f"uebezaehler_reset_{schueler_key}", use_container_width=True):
+            zustand["ziel"] = zustand["start_ziel"]
+            zustand["fehler"] = 0
+
+        if st.button("\U0001F4DD Ergebnis als Hausaufgabe/Notiz \u00FCbernehmen", key=f"uebezaehler_uebernehmen_{schueler_key}", use_container_width=True):
+            ergebnis_text = (
+                f"\u00DCbe-Z\u00E4hler ({kontext_text}): {zustand['start_ziel']} fehlerfreie Wiederholungen geschafft"
+                + (f", {zustand['fehler']} Fehlversuch(e) dabei." if zustand["fehler"] else ".")
+            )
+            bisheriger_text = str(st.session_state.get(hausaufgabe_feld_key, "")).strip()
+            st.session_state[hausaufgabe_feld_key] = (
+                f"{bisheriger_text}\n{ergebnis_text}" if bisheriger_text else ergebnis_text
+            )
+            st.success("In die Hausaufgabe \u00FCbernommen \u2013 wird beim Speichern des Unterrichtseintrags mit gesichert.")
+
+def zeige_transferbereich(student, student_bekannt=True):
     schuelername = str(student).strip() or "Sch\u00FCler"
     schueler_key = repertoire_schluessel(schuelername)
+    if not student_bekannt:
+        kompakt_titel("03 \u00B7 Aufgaben", "Aufgaben")
+        st.caption("Oben zuerst einen Sch\u00FCler ausw\u00E4hlen, um Hausaufgaben einzutragen.")
+        return "", ""
     kompakt_titel("03 \u00B7 Aufgaben", f"F\u00FCr {schuelername} und f\u00FCr mich")
     neue_hausaufgabe = st.text_area(
         f"Hausaufgabe \u00B7 f\u00FCr {schuelername}",
@@ -1042,9 +1108,13 @@ def zeige_transferbereich(student):
         )
     return neue_hausaufgabe, neue_besprechung
 
-def zeige_lobbereich(student):
+def zeige_lobbereich(student, student_bekannt=True):
     schuelername = str(student).strip() or "Sch\u00FCler"
     schueler_key = repertoire_schluessel(schuelername)
+    if not student_bekannt:
+        kompakt_titel("04 \u00B7 W\u00FCrdigung", "W\u00FCrdigung")
+        st.caption("Oben zuerst einen Sch\u00FCler ausw\u00E4hlen, um ein Lobk\u00E4rtchen zu vergeben.")
+        return False, ""
     kompakt_titel(
         "04 \u00B7 W\u00FCrdigung",
         f"Lobk\u00E4rtchen f\u00FCr {schuelername}",
@@ -1306,26 +1376,6 @@ def zeige_mini_cockpit(
             st.warning("Der Schnelleintrag ist in dieser Sitzung gesichert; Google Sheets war nicht erreichbar.")
 
 # --- DATEN-LOGIK ---
-def lade_archiv_aus_sheet():
-    daten = {
-        'Schueler': ['Emma', 'Max', 'Lina'],
-        'Stueck': ['Sonatine Opus 36', 'F\u00FCr Elise', 'Inventio 1'],
-        'Konzertstueck': ['Sonatine 1. Satz', 'F\u00FCr Elise', 'Inventio 1'],
-        'Dauer_Minuten': [45, 60, 30],
-        'Schwierigkeit': [3, 4, 2],
-        'K\u00E4rtchen_Erhalten': ['Ja', 'Nein', 'Ja'],
-        'Grund': ['Toller Rhythmus im Takt 12', '', 'Wundersch\u00F6ne Dynamik'],
-        'Bis_Naechsten_Mal': ['Takt 15-20 langsam \u00FCben', 'Pedalwechsel weicher gestalten', 'Rhythmus klatschen']
-    }
-    return pd.DataFrame(daten)
-
-def hole_konzertprogramm(student, archiv):
-    auswahl = archiv.loc[archiv["Schueler"] == student, "Konzertstueck"].dropna()
-    auswahl = [str(stueck).strip() for stueck in auswahl if str(stueck).strip()]
-    if not auswahl:
-        return "Noch nicht festgelegt"
-    return " \u00B7 ".join(dict.fromkeys(auswahl))
-
 KALENDER_SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 def _hole_service_account_info():
@@ -1502,7 +1552,13 @@ def erstelle_zertifikat_pdf(student, df_archiv):
     pdf.cell(200, 10, txt=f"Du hast im Jahr {aktuelles_jahr} folgende Stuecke gelernt:", ln=True)
     
     pdf.set_font("Arial", size=12)
-    stuecke = df_archiv[df_archiv['Schueler'] == student]['Stueck'].unique()
+    zeilen = df_archiv[df_archiv['Sch\u00FCler'] == student]['St\u00FCcke'].dropna()
+    stuecke = []
+    for eintrag in zeilen:
+        for stueck in str(eintrag).split(" \u00B7 "):
+            stueck = stueck.strip()
+            if stueck and stueck not in stuecke:
+                stuecke.append(stueck)
     for s in stuecke:
         pdf.cell(200, 10, txt=f"- {s}", ln=True)
         
@@ -1511,16 +1567,267 @@ def erstelle_zertifikat_pdf(student, df_archiv):
     pdf.cell(200, 10, txt="Besondere Erfolge - dafuer habe ich ein Lobkaertchen erhalten:", ln=True)
     pdf.set_font("Arial", size=12)
     
-    lob = df_archiv[(df_archiv['Schueler'] == student) & (df_archiv['K\u00E4rtchen_Erhalten'] == 'Ja')]
+    lob = df_archiv[(df_archiv['Sch\u00FCler'] == student) & (df_archiv['Lobk\u00E4rtchen_Erhalten'] == 'Ja')]
     for _, row in lob.iterrows():
-        pdf.cell(200, 10, txt=f"* {row['Grund']}", ln=True)
+        grund = str(row.get('Lob_Grund', '')).strip()
+        if grund:
+            pdf.cell(200, 10, txt=f"* {grund}", ln=True)
         
     return pdf.output(dest='S').encode('latin-1')
+
+def lade_archiv_aus_sheet():
+    """Liest das komplette Unterrichtsarchiv live aus Google Sheets (Arbeitsblatt
+    'Unterrichtsarchiv'). Gibt bei fehlender Verbindung eine leere Tabelle mit den
+    richtigen Spalten zur\u00FCck, statt Beispieldaten vorzut\u00E4uschen."""
+    spalten = [
+        "Sch\u00FCler", "Datum", "Status", "St\u00FCcke", "Konzertprogramm",
+        "Hausaufgabe", "Hausaufgabe_Erledigt",
+        "Bis_zur_n\u00E4chsten_Stunde", "Bis_zur_n\u00E4chsten_Stunde_Erledigt",
+        "Lobk\u00E4rtchen_Erhalten", "Lob_Grund",
+    ]
+    if GSheetsConnection is None:
+        return pd.DataFrame(columns=spalten)
+    try:
+        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        daten = verbindung.read(worksheet="Unterrichtsarchiv", ttl=60)
+        if daten is None or daten.empty:
+            return pd.DataFrame(columns=spalten)
+        daten = daten.copy()
+        for spalte in spalten:
+            if spalte not in daten.columns:
+                daten[spalte] = ""
+        return daten
+    except Exception:
+        return pd.DataFrame(columns=spalten)
+
+def hole_konzertprogramm(student, archiv):
+    auswahl = archiv.loc[archiv["Sch\u00FCler"] == student, "Konzertprogramm"].dropna()
+    stuecke = []
+    for eintrag in auswahl:
+        for stueck in str(eintrag).split(" \u00B7 "):
+            stueck = stueck.strip()
+            if stueck and stueck not in stuecke:
+                stuecke.append(stueck)
+    if not stuecke:
+        return "Noch nicht festgelegt"
+    return " \u00B7 ".join(stuecke)
+
+WOCHENTAGE_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+def hole_wochentermine(anzahl_tage=7):
+    """Liefert die Kalendertermine der kommenden Tage (inkl. heute) als
+    Dict {datetime.date: [Termine]}. Gibt None zur\u00FCck, wenn der Kalender
+    nicht erreichbar ist (mind. ein Tag konnte nicht geladen werden)."""
+    tz = ZoneInfo("Europe/Berlin")
+    heute = datetime.date.today()
+    woche = {}
+    for versatz in range(anzahl_tage):
+        tag = heute + datetime.timedelta(days=versatz)
+        rohdaten = _lade_kalender_rohdaten(tag.isoformat())
+        if rohdaten is None:
+            return None
+        termine = []
+        for termin in rohdaten:
+            start_info = termin.get("start", {})
+            ende_info = termin.get("end", {})
+            if "dateTime" not in start_info or "dateTime" not in ende_info:
+                continue
+            try:
+                start = datetime.datetime.fromisoformat(start_info["dateTime"]).astimezone(tz)
+                ende = datetime.datetime.fromisoformat(ende_info["dateTime"]).astimezone(tz)
+            except ValueError:
+                continue
+            termine.append({"name": termin.get("summary", "Ohne Titel"), "start": start, "ende": ende})
+        woche[tag] = sorted(termine, key=lambda t: t["start"])
+    return woche
+
+def springe_zu_schueler(name):
+    st.session_state["manuell_gewaehlter_schueler"] = name
+    st.session_state["zentraler_schueler_sprung"] = name
+    st.rerun()
+
+def zeige_heutige_liste(termine, jetzt):
+    """Chronologische Liste der heutigen Termine. Ein Klick auf einen Eintrag
+    springt direkt zu diesem Sch\u00FCler im Cockpit darunter."""
+    if termine is None:
+        st.caption("Die Tagesliste erscheint, sobald der Google Kalender verbunden ist.")
+        return
+    if not termine:
+        st.caption("Heute keine Termine \u2013 Zeit f\u00FCr freie Improvisation.")
+        return
+    for termin in sorted(termine, key=lambda t: t["start"]):
+        if termin["ende"] <= jetzt:
+            symbol = "\u2705"
+        elif termin["start"] <= jetzt < termin["ende"]:
+            symbol = "\U0001F3B9"
+        else:
+            symbol = "\u23F3"
+        zeit = f'{termin["start"].strftime("%H:%M")}\u2013{termin["ende"].strftime("%H:%M")}'
+        spalte_zeit, spalte_knopf = st.columns([0.32, 0.68])
+        spalte_zeit.markdown(f"**{zeit}**")
+        if spalte_knopf.button(
+            f'{symbol} {termin["name"]}',
+            key=f'jump_heute_{termin["start"].isoformat()}',
+            use_container_width=True,
+        ):
+            springe_zu_schueler(termin["name"])
+
+def zeige_wochenuebersicht(woche):
+    """Kompakte Spalten-\u00DCbersicht der n\u00E4chsten Tage. Ein Klick auf einen
+    Termin springt ebenfalls direkt zu diesem Sch\u00FCler."""
+    if woche is None:
+        st.caption("Die Wochen\u00FCbersicht erscheint, sobald der Google Kalender verbunden ist.")
+        return
+    tage = list(woche.items())
+    spalten = st.columns(len(tage))
+    for spalte, (tag, termine) in zip(spalten, tage):
+        with spalte:
+            ist_heute = tag == datetime.date.today()
+            kopf = f"**{WOCHENTAGE_KURZ[tag.weekday()]} {tag.strftime('%d.%m.')}**"
+            if ist_heute:
+                kopf += " \u2022 heute"
+            st.markdown(kopf)
+            if not termine:
+                st.caption("frei")
+                continue
+            for termin in termine:
+                if st.button(
+                    f'{termin["start"].strftime("%H:%M")} {termin["name"]}',
+                    key=f'jump_woche_{tag.isoformat()}_{termin["start"].isoformat()}',
+                    use_container_width=True,
+                ):
+                    springe_zu_schueler(termin["name"])
+
+def hole_meine_vorbereitungen(df_archiv, wochentermine):
+    """Ermittelt pro Sch\u00FCler die zuletzt eingetragene, noch nicht abgehakte
+    eigene Vorbereitungsnotiz ('Bis zur n\u00E4chsten Stunde erledigen') aus dem
+    Unterrichtsarchiv \u2013 also genau das, was beim letzten Unterricht mit
+    diesem Sch\u00FCler bereits im Cockpit eingetragen wurde. Kein separates
+    Arbeitsblatt n\u00F6tig."""
+    if df_archiv.empty or "Bis_zur_n\u00E4chsten_Stunde" not in df_archiv.columns:
+        return []
+    daten = df_archiv[df_archiv.get("Status", "") == "Abgeschlossen"].copy()
+    daten = daten[daten["Bis_zur_n\u00E4chsten_Stunde"].astype(str).str.strip() != ""]
+    if "Bis_zur_n\u00E4chsten_Stunde_Erledigt" in daten.columns:
+        daten = daten[daten["Bis_zur_n\u00E4chsten_Stunde_Erledigt"].astype(str).str.strip().str.lower() != "ja"]
+    if daten.empty:
+        return []
+    daten["_sortdatum"] = pd.to_datetime(daten["Datum"], errors="coerce")
+    daten = daten.sort_values("_sortdatum")
+    letzte_je_schueler = daten.groupby("Sch\u00FCler", as_index=False).tail(1)
+
+    naechster_termin_je_schueler = {}
+    if wochentermine:
+        for tag, termine in sorted(wochentermine.items()):
+            for termin in termine:
+                naechster_termin_je_schueler.setdefault(termin["name"], tag)
+
+    ergebnis = []
+    for zeilen_index, zeile in letzte_je_schueler.iterrows():
+        schueler = zeile["Sch\u00FCler"]
+        ergebnis.append({
+            "schueler": schueler,
+            "notiz": zeile["Bis_zur_n\u00E4chsten_Stunde"],
+            "faelligkeit": naechster_termin_je_schueler.get(schueler),
+            "archiv_index": zeilen_index,
+        })
+    ergebnis.sort(key=lambda e: (e["faelligkeit"] is None, e["faelligkeit"] or datetime.date.max))
+    return ergebnis
+
+def zeige_meine_vorbereitungen_spalte(df_archiv, wochentermine):
+    st.markdown("**Meine Vorbereitungen**")
+    offene = hole_meine_vorbereitungen(df_archiv, wochentermine)
+    if not offene:
+        st.caption("Keine offenen Vorbereitungen eingetragen.")
+        return
+    for eintrag in offene:
+        if eintrag["faelligkeit"]:
+            faellig_text = f'bis {eintrag["faelligkeit"].strftime("%d.%m.%Y")}'
+        else:
+            faellig_text = "bis zur n\u00E4chsten Stunde"
+        abgehakt = st.checkbox(
+            f'{eintrag["schueler"]} \u00B7 {eintrag["notiz"]} \u2014 {faellig_text}',
+            key=f'vorbereitung_done_{eintrag["archiv_index"]}',
+        )
+        if abgehakt:
+            aktualisiert = df_archiv.copy()
+            if "Bis_zur_n\u00E4chsten_Stunde_Erledigt" not in aktualisiert.columns:
+                aktualisiert["Bis_zur_n\u00E4chsten_Stunde_Erledigt"] = ""
+            aktualisiert.loc[eintrag["archiv_index"], "Bis_zur_n\u00E4chsten_Stunde_Erledigt"] = "Ja"
+            if GSheetsConnection is not None:
+                try:
+                    verbindung = st.connection("gsheets", type=GSheetsConnection)
+                    verbindung.update(worksheet="Unterrichtsarchiv", data=aktualisiert)
+                    st.rerun()
+                except Exception:
+                    st.warning("Konnte nicht als erledigt gespeichert werden.")
+
+def hole_offene_hausaufgaben(df_archiv, wochentermine):
+    """Ermittelt pro Sch\u00FCler die zuletzt eingetragene, noch nicht abgehakte
+    Hausaufgabe aus dem Unterrichtsarchiv. Das F\u00E4lligkeitsdatum wird aus dem
+    n\u00E4chsten Kalendertermin dieses Sch\u00FClers gesch\u00E4tzt, falls vorhanden."""
+    if df_archiv.empty or "Hausaufgabe" not in df_archiv.columns:
+        return []
+    daten = df_archiv[df_archiv.get("Status", "") == "Abgeschlossen"].copy()
+    daten = daten[daten["Hausaufgabe"].astype(str).str.strip() != ""]
+    if "Hausaufgabe_Erledigt" in daten.columns:
+        daten = daten[daten["Hausaufgabe_Erledigt"].astype(str).str.strip().str.lower() != "ja"]
+    if daten.empty:
+        return []
+    daten["_sortdatum"] = pd.to_datetime(daten["Datum"], errors="coerce")
+    daten = daten.sort_values("_sortdatum")
+    letzte_je_schueler = daten.groupby("Sch\u00FCler", as_index=False).tail(1)
+
+    naechster_termin_je_schueler = {}
+    if wochentermine:
+        for tag, termine in sorted(wochentermine.items()):
+            for termin in termine:
+                naechster_termin_je_schueler.setdefault(termin["name"], tag)
+
+    ergebnis = []
+    for zeilen_index, zeile in letzte_je_schueler.iterrows():
+        schueler = zeile["Sch\u00FCler"]
+        ergebnis.append({
+            "schueler": schueler,
+            "hausaufgabe": zeile["Hausaufgabe"],
+            "faelligkeit": naechster_termin_je_schueler.get(schueler),
+            "archiv_index": zeilen_index,
+        })
+    ergebnis.sort(key=lambda e: (e["faelligkeit"] is None, e["faelligkeit"] or datetime.date.max))
+    return ergebnis
+
+def zeige_offene_hausaufgaben_spalte(df_archiv, wochentermine):
+    st.markdown("**Offene Sch\u00FCler-Hausaufgaben**")
+    offene = hole_offene_hausaufgaben(df_archiv, wochentermine)
+    if not offene:
+        st.caption("Keine offenen Hausaufgaben eingetragen.")
+        return
+    for eintrag in offene:
+        if eintrag["faelligkeit"]:
+            faellig_text = f'f\u00E4llig am {eintrag["faelligkeit"].strftime("%d.%m.%Y")}'
+        else:
+            faellig_text = "f\u00E4llig bis zur n\u00E4chsten Stunde"
+        abgehakt = st.checkbox(
+            f'{eintrag["schueler"]} \u00B7 {eintrag["hausaufgabe"]} \u2014 {faellig_text}',
+            key=f'hausaufgabe_done_{eintrag["archiv_index"]}',
+        )
+        if abgehakt:
+            aktualisiert = df_archiv.copy()
+            if "Hausaufgabe_Erledigt" not in aktualisiert.columns:
+                aktualisiert["Hausaufgabe_Erledigt"] = ""
+            aktualisiert.loc[eintrag["archiv_index"], "Hausaufgabe_Erledigt"] = "Ja"
+            if GSheetsConnection is not None:
+                try:
+                    verbindung = st.connection("gsheets", type=GSheetsConnection)
+                    verbindung.update(worksheet="Unterrichtsarchiv", data=aktualisiert)
+                    st.rerun()
+                except Exception:
+                    st.warning("Konnte nicht als erledigt gespeichert werden.")
 
 df_archiv = lade_archiv_aus_sheet()
 
 # --- DAUERHAFTE STEUERUNG IN DER SEITENLEISTE ---
-schueler_liste = df_archiv["Schueler"].dropna().unique().tolist()
+schueler_liste = df_archiv["Sch\u00FCler"].dropna().unique().tolist()
 jetzt = datetime.datetime.now(ZoneInfo("Europe/Berlin"))
 heutige_termine = get_heutige_unterrichtstermine_aus_kalender()
 
@@ -1529,7 +1836,24 @@ if "kalender_fehler" in st.session_state:
 
 aktueller_termin, naechster_termin = finde_aktuellen_und_naechsten_termin(heutige_termine, jetzt)
 erkennter_schueler = aktueller_termin["name"] if aktueller_termin else None
-ist_automatisch_erkannt = bool(erkennter_schueler)
+
+PUFFER_MINUTEN = 30
+
+kuerzlich_beendeter_termin = None
+if heutige_termine:
+    beendete_termine = [t for t in heutige_termine if t["ende"] <= jetzt]
+    if beendete_termine:
+        letzter_beendeter = max(beendete_termine, key=lambda t: t["ende"])
+        if (jetzt - letzter_beendeter["ende"]) <= datetime.timedelta(minutes=PUFFER_MINUTEN):
+            kuerzlich_beendeter_termin = letzter_beendeter
+
+bald_beginnender_termin = None
+if naechster_termin and (naechster_termin["start"] - jetzt) <= datetime.timedelta(minutes=PUFFER_MINUTEN):
+    bald_beginnender_termin = naechster_termin
+
+fokus_termin = aktueller_termin or bald_beginnender_termin or kuerzlich_beendeter_termin
+im_unterrichtsfenster = fokus_termin is not None
+
 naechster_titel, naechster_hinweis = formatiere_naechsten_termin(
     naechster_termin,
     kalender_verbunden=heutige_termine is not None,
@@ -1558,21 +1882,48 @@ else:
         st.markdown(f'<div class="day-date">{datetime.date.today().strftime("%d.%m.%Y")}</div>', unsafe_allow_html=True)
         st.markdown(erstelle_tagesleisten_html(heutige_termine, jetzt), unsafe_allow_html=True)
 
-        if erkennter_schueler:
-            student = erkennter_schueler
+        manuell_gesprungen = st.session_state.get("manuell_gewaehlter_schueler")
+
+        if manuell_gesprungen:
+            student = manuell_gesprungen
             unterrichtsdatum = datetime.date.today()
-            dauer_minuten = int((aktueller_termin["ende"] - aktueller_termin["start"]).total_seconds() // 60)
-            stundenende = aktueller_termin["ende"]
-            st.success(f"Aktuell: {student}")
-            fortschritt = (jetzt - aktueller_termin["start"]).total_seconds() / (aktueller_termin["ende"] - aktueller_termin["start"]).total_seconds()
-            st.progress(min(max(fortschritt, 0.0), 1.0), text=f'{aktueller_termin["start"].strftime("%H:%M")}\u2013{aktueller_termin["ende"].strftime("%H:%M")} Uhr')
+            dauer_minuten = 45
+            stundenende = jetzt + datetime.timedelta(minutes=dauer_minuten)
+            st.info(f"Manuell ausgew\u00E4hlt: {student}")
+            if st.button("Zur\u00FCck zur automatischen Erkennung", use_container_width=True):
+                del st.session_state["manuell_gewaehlter_schueler"]
+                if "zentraler_schueler_sprung" in st.session_state:
+                    del st.session_state["zentraler_schueler_sprung"]
+                st.rerun()
+        elif fokus_termin:
+            student = fokus_termin["name"]
+            unterrichtsdatum = datetime.date.today()
+            dauer_minuten = int((fokus_termin["ende"] - fokus_termin["start"]).total_seconds() // 60)
+            stundenende = fokus_termin["ende"]
+            if aktueller_termin:
+                st.success(f"Aktuell: {student}")
+                fortschritt = (jetzt - aktueller_termin["start"]).total_seconds() / (aktueller_termin["ende"] - aktueller_termin["start"]).total_seconds()
+                st.progress(min(max(fortschritt, 0.0), 1.0), text=f'{aktueller_termin["start"].strftime("%H:%M")}\u2013{aktueller_termin["ende"].strftime("%H:%M")} Uhr')
+            elif bald_beginnender_termin:
+                minuten_bis = max(0, int((fokus_termin["start"] - jetzt).total_seconds() // 60))
+                st.info(f"Gleich dran: {student} \u00B7 in {minuten_bis} Min.")
+            else:
+                minuten_seit = max(0, int((jetzt - fokus_termin["ende"]).total_seconds() // 60))
+                st.info(f"Gerade beendet: {student} \u00B7 vor {minuten_seit} Min.")
         else:
+            SCHUELER_PLATZHALTER = "\u2013 Bitte ausw\u00E4hlen \u2013"
             with st.expander("Sch\u00FCler manuell ausw\u00E4hlen", expanded=heutige_termine is None):
-                student = st.selectbox("Sch\u00FCler", schueler_liste, label_visibility="collapsed")
+                student = st.selectbox(
+                    "Sch\u00FCler",
+                    [SCHUELER_PLATZHALTER] + schueler_liste,
+                    label_visibility="collapsed",
+                )
                 unterrichtsdatum = st.date_input("Datum", value=datetime.date.today(), format="DD.MM.YYYY")
                 dauer_minuten = st.selectbox("Dauer", [30, 45, 60], index=1, format_func=lambda x: f"{x} Minuten")
             stundenende = jetzt + datetime.timedelta(minutes=int(dauer_minuten))
             st.caption("Die manuelle Auswahl wird nur ben\u00F6tigt, wenn gerade kein Kalendertermin l\u00E4uft.")
+
+    student_bekannt = bool(manuell_gesprungen) or bool(fokus_termin) or (str(student) != "\u2013 Bitte ausw\u00E4hlen \u2013")
 
     st.session_state["aktueller_student"] = str(student)
     st.session_state["unterrichtsende"] = stundenende.isoformat() if stundenende else ""
@@ -1605,7 +1956,65 @@ navigation_html += "</nav>"
 st.markdown(navigation_html, unsafe_allow_html=True)
 
 if aktive_ansicht == "live":
-    if ist_automatisch_erkannt:
+    if "ansicht_override" not in st.session_state:
+        st.session_state["ansicht_override"] = None
+
+    automatisch_vollcockpit = bool(manuell_gesprungen) or im_unterrichtsfenster
+    if st.session_state["ansicht_override"] == "cockpit":
+        zeige_vollcockpit = True
+    elif st.session_state["ansicht_override"] == "uebersicht":
+        zeige_vollcockpit = False
+    else:
+        zeige_vollcockpit = automatisch_vollcockpit
+
+    umschalt_links, umschalt_rechts = st.columns([0.7, 0.3])
+    with umschalt_links:
+        if st.session_state["ansicht_override"]:
+            st.caption("Ansicht manuell umgeschaltet \u2013 folgt gerade nicht dem Kalender.")
+    with umschalt_rechts:
+        umschalt_label = "\U0001F9ED Zur \u00DCbersicht" if zeige_vollcockpit else "\U0001F393 Zum Cockpit"
+        if st.button(umschalt_label, use_container_width=True):
+            st.session_state["ansicht_override"] = "uebersicht" if zeige_vollcockpit else "cockpit"
+            st.rerun()
+        if st.session_state["ansicht_override"] and st.button("\U0001F504 Automatisch", use_container_width=True):
+            st.session_state["ansicht_override"] = None
+            st.rerun()
+
+    if not zeige_vollcockpit:
+        st.markdown("## \U0001F9ED Tages- & Wochen\u00FCbersicht")
+        tab_heute, tab_woche = st.tabs(["Heutiger Tag", "Kommende Woche"])
+        with tab_heute:
+            zeige_heutige_liste(heutige_termine, jetzt)
+        with tab_woche:
+            wochentermine = hole_wochentermine(7)
+            zeige_wochenuebersicht(wochentermine)
+
+        st.markdown("## \u2705 Aufgaben & To-Dos")
+        todo_links, todo_rechts = st.columns(2)
+        with todo_links:
+            with st.container(border=True):
+                zeige_meine_vorbereitungen_spalte(df_archiv, wochentermine)
+        with todo_rechts:
+            with st.container(border=True):
+                zeige_offene_hausaufgaben_spalte(df_archiv, wochentermine)
+
+    st.markdown("## \U0001F3AF Zu Sch\u00FCler springen")
+    SPRUNG_AUTOMATISCH = "\u2013 automatisch (Kalender) \u2013"
+    sprung_auswahl = st.selectbox(
+        "Direkt zu einem Sch\u00FCler springen",
+        [SPRUNG_AUTOMATISCH] + schueler_liste,
+        label_visibility="collapsed",
+        key="zentraler_schueler_sprung",
+    )
+    if sprung_auswahl != SPRUNG_AUTOMATISCH and sprung_auswahl != st.session_state.get("manuell_gewaehlter_schueler"):
+        springe_zu_schueler(sprung_auswahl)
+
+    if not zeige_vollcockpit:
+        st.stop()
+
+    st.divider()
+
+    if student_bekannt:
         aktueller_schueler_anzeige = str(student)
         aktueller_schueler_hinweis = f"{unterrichtsdatum.strftime('%d.%m.%Y')} · {dauer_minuten} Minuten"
     else:
@@ -1715,13 +2124,16 @@ if aktive_ansicht == "live":
     with linke_cockpit_spalte:
         with st.container(border=True):
             modus, speicher_text = zeige_technikbereich()
+        if student_bekannt:
+            schueler_key_zaehler = repertoire_schluessel(str(student).strip() or "Sch\u00FCler")
+            zeige_uebe_zaehler(schueler_key_zaehler, modus, f"transfer_hausaufgabe_{schueler_key_zaehler}")
         with st.container(border=True):
-            neue_hausaufgabe, neue_besprechung = zeige_transferbereich(student)
+            neue_hausaufgabe, neue_besprechung = zeige_transferbereich(student, student_bekannt)
     with rechte_cockpit_spalte:
         with st.container(border=True):
             repertoire_eintraege, programm_status = zeige_repertoirebereich(student, stundenende)
         with st.container(border=True):
-            lob_vergeben, grund = zeige_lobbereich(student)
+            lob_vergeben, grund = zeige_lobbereich(student, student_bekannt)
 
     entwurf = {
         "Sch\u00FCler": str(student),
@@ -1790,7 +2202,9 @@ if aktive_ansicht == "live":
                 "Wettbewerbstermin": programm_status["Wettbewerbstermin"],
                 "Wettbewerb_Angemeldet": programm_status["Wettbewerb angemeldet"],
                 "Hausaufgabe": neue_hausaufgabe.strip(),
+                "Hausaufgabe_Erledigt": "Nein",
                 "Bis_zur_n\u00E4chsten_Stunde": neue_besprechung.strip(),
+                "Bis_zur_n\u00E4chsten_Stunde_Erledigt": "Nein",
                 "Lobk\u00E4rtchen_Erhalten": "Ja" if lob_vergeben else "Nein",
                 "Lob_Grund": grund.strip(),
                 "F\u00FCr_TaskCards": "Ja" if lob_vergeben else "Nein",
@@ -1828,11 +2242,19 @@ elif aktive_ansicht == "analyse":
             "Tonart": ["C-Dur"] * 5,
         }
     )
+    eigene_eintraege = df_archiv[df_archiv["Sch\u00FCler"] == student]
+    erarbeitete_stuecke_set = set()
+    for eintrag in eigene_eintraege["St\u00FCcke"].dropna():
+        for stueck in str(eintrag).split(" \u00B7 "):
+            stueck = stueck.strip()
+            if stueck:
+                erarbeitete_stuecke_set.add(stueck)
+
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Archivierte Eintr\u00E4ge", len(df_archiv[df_archiv["Schueler"] == student]))
+    kpi1.metric("Archivierte Eintr\u00E4ge", len(eigene_eintraege))
     kpi2.metric("Aktuelles Tempo", "128 BPM", "+18 BPM")
-    kpi3.metric("Erarbeitete St\u00FCcke", df_archiv[df_archiv["Schueler"] == student]["Stueck"].nunique())
-    kpi4.metric("Lobk\u00E4rtchen", len(df_archiv[(df_archiv["Schueler"] == student) & (df_archiv["K\u00E4rtchen_Erhalten"] == "Ja")]))
+    kpi3.metric("Erarbeitete St\u00FCcke", len(erarbeitete_stuecke_set))
+    kpi4.metric("Lobk\u00E4rtchen", len(eigene_eintraege[eigene_eintraege["Lobk\u00E4rtchen_Erhalten"] == "Ja"]))
 
     abschnitt("Jahresverlauf", "Tempo-Entwicklung", "Die Beispielkurve wird nach der Google-Sheets-Anbindung automatisch aus den Unterrichtseintr\u00E4gen gespeist.")
     fig = px.line(verlauf_daten, x="Datum", y="Tempo", markers=True)
