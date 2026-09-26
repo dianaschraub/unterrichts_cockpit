@@ -18,6 +18,58 @@ try:
 except ImportError:
     GSheetsConnection = None
 
+GSHEETS_ARBEITSBLAETTER = ["Unterrichtsarchiv", "Repertoire", "Schueler_Profile"]
+
+if GSheetsConnection is not None:
+    class CockpitGSheetsConnection(GSheetsConnection):
+        """Google-Sheets-Verbindung, die dasselbe Dienstkonto wie der Kalender nutzt.
+        In den Secrets muss unter [connections.gsheets] nur noch die Tabellen-URL
+        stehen (spreadsheet = "https://docs.google.com/..."). Stehen dort bereits
+        vollständige Dienstkonto-Daten (type = "service_account"), werden diese
+        verwendet."""
+
+        def _connect(self, **kwargs):
+            from streamlit_gsheets.gsheets_connection import GSheetsServiceAccountClient
+            einstellungen = self._secrets.to_dict()
+            if einstellungen.get("type") != "service_account":
+                dienstkonto = _hole_service_account_info()
+                if dienstkonto is None:
+                    raise RuntimeError(
+                        "Kein Dienstkonto in den Secrets gefunden "
+                        "(gcp_service_account oder gcp_service_account_b64)."
+                    )
+                einstellungen = {**dienstkonto, **einstellungen}
+            if not einstellungen.get("spreadsheet"):
+                einstellungen["spreadsheet"] = (
+                    st.secrets.get("connections", {}).get("gsheets", {}).get("spreadsheet")
+                    or st.secrets.get("spreadsheet", "")
+                )
+            if not einstellungen.get("spreadsheet"):
+                raise RuntimeError(
+                    "In den Secrets fehlt die Tabellen-URL: [connections.gsheets] "
+                    'spreadsheet = "https://docs.google.com/spreadsheets/d/..."'
+                )
+            client = GSheetsServiceAccountClient(einstellungen)
+            _lege_fehlende_arbeitsblaetter_an(client)
+            return client
+else:
+    CockpitGSheetsConnection = None
+
+def _lege_fehlende_arbeitsblaetter_an(client):
+    """Legt die benötigten Arbeitsblätter an, falls sie in der Tabelle fehlen."""
+    tabelle = client._open_spreadsheet()
+    vorhandene = {blatt.title for blatt in tabelle.worksheets()}
+    for name in GSHEETS_ARBEITSBLAETTER:
+        if name not in vorhandene:
+            tabelle.add_worksheet(title=name, rows=1000, cols=30)
+
+def hole_gsheets_verbindung():
+    return st.connection("gsheets", type=CockpitGSheetsConnection)
+
+def merke_gsheets_fehler(fehler):
+    """Merkt sich den letzten Google-Sheets-Fehler, damit er sichtbar angezeigt wird."""
+    st.session_state["gsheets_fehler"] = f"{type(fehler).__name__}: {fehler}"
+
 
 # --- SETUP & DESIGN-KONFIGURATION ---
 st.set_page_config(page_title="Klavierlehrer Cockpit", layout="wide", page_icon="\U0001F3B9")
@@ -526,7 +578,7 @@ def speichere_in_google_sheets(archiv_zeile, repertoire_zeilen):
         return False
 
     try:
-        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        verbindung = hole_gsheets_verbindung()
 
         archiv_bisher = verbindung.read(worksheet="Unterrichtsarchiv", ttl=0)
         if archiv_bisher is None:
@@ -555,8 +607,10 @@ def speichere_in_google_sheets(archiv_zeile, repertoire_zeilen):
                 repertoire_zeilen,
             )
             verbindung.update(worksheet="Repertoire", data=repertoire_aktuell)
+        st.session_state.pop("gsheets_fehler", None)
         return True
-    except Exception:
+    except Exception as fehler:
+        merke_gsheets_fehler(fehler)
         return False
 
 def speichere_unterrichtspaket(archiv_zeile, repertoire_zeilen):
@@ -587,7 +641,7 @@ def lade_taskcards_link(student):
     if GSheetsConnection is None:
         return ""
     try:
-        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        verbindung = hole_gsheets_verbindung()
         profile = verbindung.read(worksheet="Schueler_Profile", ttl=0)
         if profile is None or profile.empty or "Sch\u00FCler" not in profile.columns:
             return ""
@@ -609,7 +663,7 @@ def speichere_taskcards_link(student, link):
     if GSheetsConnection is None:
         return False
     try:
-        verbindung = st.connection("gsheets", type=GSheetsConnection)
+        verbindung = hole_gsheets_verbindung()
         profile = verbindung.read(worksheet="Schueler_Profile", ttl=0)
         if profile is None or profile.empty:
             profile = pd.DataFrame(columns=["Sch\u00FCler", "TaskCards_Link", "Gespeichert_am"])
@@ -632,7 +686,8 @@ def speichere_taskcards_link(student, link):
             profile = pd.concat([profile, neue_zeile], ignore_index=True)
         verbindung.update(worksheet="Schueler_Profile", data=profile)
         return True
-    except Exception:
+    except Exception as fehler:
+        merke_gsheets_fehler(fehler)
         return False
 
 def kompakt_titel(nummer, titel):
@@ -1146,7 +1201,7 @@ def speichere_zwischenstand(entwurf):
 
     if GSheetsConnection is not None:
         try:
-            verbindung = st.connection("gsheets", type=GSheetsConnection)
+            verbindung = hole_gsheets_verbindung()
             bisher = verbindung.read(worksheet="Unterrichtsarchiv", ttl=0)
             if bisher is None or bisher.empty:
                 bisher = pd.DataFrame(
@@ -1177,7 +1232,8 @@ def speichere_zwischenstand(entwurf):
                 bisher = pd.concat([bisher, pd.DataFrame([neue_zeile])], ignore_index=True)
             verbindung.update(worksheet="Unterrichtsarchiv", data=bisher)
             dauerhaft = True
-        except Exception:
+        except Exception as fehler:
+            merke_gsheets_fehler(fehler)
             dauerhaft = False
 
     st.session_state["zwischenstand_dauerhaft"] = dauerhaft
@@ -1588,16 +1644,18 @@ def lade_archiv_aus_sheet():
     if GSheetsConnection is None:
         return pd.DataFrame(columns=spalten)
     try:
-        verbindung = st.connection("gsheets", type=GSheetsConnection)
-        daten = verbindung.read(worksheet="Unterrichtsarchiv", ttl=60)
+        verbindung = hole_gsheets_verbindung()
+        daten = verbindung.read(worksheet="Unterrichtsarchiv", ttl=15)
         if daten is None or daten.empty:
             return pd.DataFrame(columns=spalten)
         daten = daten.copy()
         for spalte in spalten:
             if spalte not in daten.columns:
                 daten[spalte] = ""
+        st.session_state.pop("gsheets_fehler", None)
         return daten
-    except Exception:
+    except Exception as fehler:
+        merke_gsheets_fehler(fehler)
         return pd.DataFrame(columns=spalten)
 
 def hole_konzertprogramm(student, archiv):
@@ -1649,7 +1707,10 @@ def springe_zu_schueler(name, termin=None, datum=None):
         st.session_state["manuell_gewaehlte_dauer"] = int((termin["ende"] - termin["start"]).total_seconds() // 60)
     elif "manuell_gewaehlte_dauer" in st.session_state:
         del st.session_state["manuell_gewaehlte_dauer"]
-    st.session_state["zentraler_schueler_sprung"] = name
+    if st.session_state.get("zentraler_schueler_sprung") != name:
+        # Nur setzen, wenn der Sprung nicht bereits aus der Auswahlbox selbst kommt
+        # (ein bereits angezeigtes Widget darf nicht mehr verändert werden).
+        st.session_state["zentraler_schueler_sprung"] = name
     st.rerun()
 
 def zeige_heutige_liste(termine, jetzt):
@@ -1762,7 +1823,7 @@ def zeige_meine_vorbereitungen_spalte(df_archiv, wochentermine):
             aktualisiert.loc[eintrag["archiv_index"], "Bis_zur_n\u00E4chsten_Stunde_Erledigt"] = "Ja"
             if GSheetsConnection is not None:
                 try:
-                    verbindung = st.connection("gsheets", type=GSheetsConnection)
+                    verbindung = hole_gsheets_verbindung()
                     verbindung.update(worksheet="Unterrichtsarchiv", data=aktualisiert)
                     st.rerun()
                 except Exception:
@@ -1824,21 +1885,82 @@ def zeige_offene_hausaufgaben_spalte(df_archiv, wochentermine):
             aktualisiert.loc[eintrag["archiv_index"], "Hausaufgabe_Erledigt"] = "Ja"
             if GSheetsConnection is not None:
                 try:
-                    verbindung = st.connection("gsheets", type=GSheetsConnection)
+                    verbindung = hole_gsheets_verbindung()
                     verbindung.update(worksheet="Unterrichtsarchiv", data=aktualisiert)
                     st.rerun()
                 except Exception:
                     st.warning("Konnte nicht als erledigt gespeichert werden.")
 
+@st.cache_data(ttl=600)
+def hole_kommende_schueler_aus_kalender(start_iso, anzahl_tage=61):
+    """Liefert die Namen aller Sch\u00FCler, die ab start_iso in den n\u00E4chsten
+    anzahl_tage Tagen einen (zeitgebundenen) Kalendertermin haben."""
+    service_account_info = _hole_service_account_info()
+    if service_account_info is None:
+        return []
+    try:
+        creds = service_account.Credentials.from_service_account_info(
+            service_account_info, scopes=KALENDER_SCOPES
+        )
+        dienst = build("calendar", "v3", credentials=creds)
+        kalender_id = st.secrets.get("kalender_id", "primary")
+        tz = ZoneInfo("Europe/Berlin")
+        start = datetime.datetime.combine(datetime.date.fromisoformat(start_iso), datetime.time.min, tzinfo=tz)
+        ende = start + datetime.timedelta(days=anzahl_tage)
+        namen = set()
+        seiten_token = None
+        while True:
+            ergebnis = dienst.events().list(
+                calendarId=kalender_id,
+                timeMin=start.isoformat(),
+                timeMax=ende.isoformat(),
+                singleEvents=True,
+                orderBy="startTime",
+                maxResults=2500,
+                pageToken=seiten_token,
+            ).execute()
+            for termin in ergebnis.get("items", []):
+                if "dateTime" not in termin.get("start", {}):
+                    continue  # ganzt\u00E4gige Eintr\u00E4ge (Ferien, Feiertage) sind keine Sch\u00FCler
+                name = str(termin.get("summary", "")).strip()
+                if name:
+                    namen.add(name)
+            seiten_token = ergebnis.get("nextPageToken")
+            if not seiten_token:
+                break
+        return sorted(namen, key=str.casefold)
+    except Exception as fehler:
+        st.session_state["kalender_fehler"] = str(fehler)
+        return []
+
+def erstelle_schueler_liste(df_archiv):
+    """Sch\u00FCler der n\u00E4chsten zwei Monate aus dem Kalender, erg\u00E4nzt um alle
+    Sch\u00FCler aus dem Unterrichtsarchiv \u2013 alphabetisch und ohne Doppelungen."""
+    namen = {}
+    kalender_namen = hole_kommende_schueler_aus_kalender(datetime.date.today().isoformat())
+    archiv_namen = df_archiv["Sch\u00FCler"].dropna().astype(str).str.strip().tolist()
+    for name in kalender_namen + archiv_namen:
+        if name and name.casefold() not in namen:
+            namen[name.casefold()] = name
+    return sorted(namen.values(), key=str.casefold)
+
 df_archiv = lade_archiv_aus_sheet()
 
 # --- DAUERHAFTE STEUERUNG IN DER SEITENLEISTE ---
-schueler_liste = df_archiv["Sch\u00FCler"].dropna().unique().tolist()
+schueler_liste = erstelle_schueler_liste(df_archiv)
 jetzt = datetime.datetime.now(ZoneInfo("Europe/Berlin"))
 heutige_termine = get_heutige_unterrichtstermine_aus_kalender()
 
 if "kalender_fehler" in st.session_state:
     st.error(f"Kalender-Fehler: {st.session_state['kalender_fehler']}")
+
+if GSheetsConnection is None:
+    st.error(
+        "Speichern nicht m\u00F6glich: Das Paket 'st-gsheets-connection' ist nicht installiert "
+        "(requirements.txt pr\u00FCfen)."
+    )
+elif "gsheets_fehler" in st.session_state:
+    st.error(f"Google-Sheets-Fehler \u2013 Eintr\u00E4ge werden nicht dauerhaft gespeichert: {st.session_state['gsheets_fehler']}")
 
 aktueller_termin, naechster_termin = finde_aktuellen_und_naechsten_termin(heutige_termine, jetzt)
 erkennter_schueler = aktueller_termin["name"] if aktueller_termin else None
