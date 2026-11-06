@@ -701,10 +701,14 @@ def zeige_technikbereich():
     kompakt_titel("01 \u00B7 Technik", "\u00DCbungs- und Technikbereich")
     modus = st.radio(
         "Bereich",
-        ["Tastenforscher", "Klassische Tonleitern", "Fortgeschrittene Et\u00FCden"],
+        ["Tastenforscher", "Klassische Tonleitern", "Fortgeschrittene Et\u00FCden",
+         "Keine Tonleiter oder Fingerübung"],
         horizontal=True,
         key="technik_modus",
     )
+
+    if modus == "Keine Tonleiter oder Fingerübung":
+        return modus, "Keine Tonleiter oder Fingerübung ausgewählt"
 
     if modus == "Tastenforscher":
         titel_spalte, seiten_spalte = st.columns([1.35, 0.65])
@@ -739,10 +743,12 @@ def zeige_technikbereich():
                 key="technik_tonleiter",
             )
         with spielart_spalte:
-            bewegung_wahl = st.selectbox(
-                "Spielart",
-                ["Parallelbewegung", "Gegenbewegung"],
-                key="technik_spielart",
+            bewegung_wahl = st.multiselect(
+                "Spielarten (Mehrfachauswahl möglich)",
+                ["Parallelbewegung", "Gegenbewegung",
+                 "Parallelbewegung und Gegenbewegung", "Arpeggien"],
+                default=["Parallelbewegung"],
+                key="technik_spielarten",
             )
         tempo_wahl = st.slider(
             "Tempo",
@@ -755,7 +761,7 @@ def zeige_technikbereich():
         )
         return modus, (
             f"Tonleiter: {tonleiter_text or 'ohne Tonart'} \u00B7 "
-            f"{bewegung_wahl} \u00B7 {tempo_wahl} BPM"
+            f"{', '.join(bewegung_wahl) or 'keine Spielart ausgewählt'} \u00B7 {tempo_wahl} BPM"
         )
 
     titel_spalte, komponist_spalte = st.columns(2)
@@ -2496,3 +2502,4 @@ elif aktive_ansicht == "zertifikate":
             whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} f\u00FCr {student} aus der Klavierstunde."
             whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(whatsapp_text)}"
             st.link_button("\u00DCber WhatsApp teilen", whatsapp_url, use_container_width=True)
+
