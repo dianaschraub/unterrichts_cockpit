@@ -18,7 +18,7 @@ try:
 except ImportError:
     GSheetsConnection = None
 
-GSHEETS_ARBEITSBLAETTER = ["Unterrichtsarchiv", "Repertoire", "Schueler_Profile"]
+GSHEETS_ARBEITSBLAETTER = ["Unterrichtsarchiv", "Repertoire", "Schueler_Profile", "Kalenderabgleich"]
 
 if GSheetsConnection is not None:
     class CockpitGSheetsConnection(GSheetsConnection):
@@ -1950,7 +1950,128 @@ def erstelle_schueler_liste(df_archiv):
             namen[name.casefold()] = name
     return sorted(namen.values(), key=str.casefold)
 
+# Kalenderhistorie und Absagen werden zusammen in einem eigenen Blatt gespeichert.
+# Ein fehlender Termin allein gilt nie als Absage: Google muss die Löschung bestätigen.
+def kalender_absagen_abgleichen(alt, termine, hole_termin, jetzt, neuer_plan=False):
+    daten = {key: dict(value) for key, value in alt.items()}
+    aktive_ids = {t['id'] for t in termine if t.get('id')}
+    if neuer_plan:
+        daten = {key: value for key, value in daten.items() if value.get('Status') != 'Geplant'}
+    for termin in termine:
+        ident = termin.get('id')
+        if not ident or 'dateTime' not in termin.get('start', {}):
+            continue
+        if termin.get('status') == 'cancelled':
+            continue
+        vorher = daten.get(ident, {})
+        daten[ident] = {
+            'Name': termin.get('summary', 'Ohne Titel'),
+            'Start': termin['start']['dateTime'],
+            'Ende': termin.get('end', {}).get('dateTime', termin['start']['dateTime']),
+            'Erstmals_gesehen': vorher.get('Erstmals_gesehen', jetzt.isoformat()),
+            'Status': 'Geplant',
+        }
+    if not neuer_plan:
+        for ident, eintrag in list(daten.items()):
+            if ident in aktive_ids or eintrag.get('Status') != 'Geplant':
+                continue
+            # Vergangene Stunden nicht durch spätere Kalenderbereinigung zu Absagen machen.
+            ende = datetime.datetime.fromisoformat(eintrag['Ende'])
+            if ende < jetzt - datetime.timedelta(days=30):
+                continue
+            termin = hole_termin(ident)
+            if termin.get('status') == 'cancelled':
+                eintrag['Status'] = 'Absage (automatisch erkannt)'
+                eintrag['Erkannt_am'] = jetzt.isoformat()
+            elif 'dateTime' in termin.get('start', {}):
+                # Gleiche ID, andere Uhrzeit: verschoben, keine Absage.
+                eintrag['Start'] = termin['start']['dateTime']
+                eintrag['Ende'] = termin.get('end', {}).get('dateTime', eintrag['Start'])
+                eintrag['Name'] = termin.get('summary', eintrag['Name'])
+    return daten
+
+
+def zeige_kalender_absagen():
+    with st.sidebar.expander('Absagen & Stundenplan', expanded=False):
+        st.caption('Bekannte Termine werden gespeichert. Bestätigte Kalenderlöschungen erscheinen hier als Absagen. Der Kalender bleibt unverändert.')
+        pause = st.checkbox('Stundenplan wird gerade geändert – Erkennung pausieren', key='kalender_plan_pause')
+        neuer_plan = st.button('Neuen Stundenplan übernehmen', key='kalender_neuer_plan')
+        st.caption('Vor dem Umbau pausieren. Danach den neuen Plan übernehmen: entfernte Termine zählen dann nicht als Absagen. Bisherige Absagen bleiben erhalten.')
+        if GSheetsConnection is None:
+            st.warning('Die Absagenerkennung benötigt die Google-Sheets-Verbindung.')
+            return
+        try:
+            verbindung = hole_gsheets_verbindung()
+            tabelle = verbindung.read(worksheet='Kalenderabgleich', ttl=0)
+            daten = {}
+            if tabelle is not None and not tabelle.empty:
+                for zeile in tabelle.to_dict('records'):
+                    if zeile.get('ID') and isinstance(zeile.get('Daten'), str):
+                        daten[str(zeile['ID'])] = json.loads(zeile['Daten'])
+            kalender_id = str(st.secrets.get('kalender_id', 'primary'))
+            # IDs gehören immer zu genau einem Kalender.
+            prefix = kalender_id + '|'
+            eigene = {key[len(prefix):]: value for key, value in daten.items() if key.startswith(prefix)}
+            jetzt_abgleich = datetime.datetime.now(ZoneInfo('Europe/Berlin'))
+            letzter = st.session_state.get('absagen_letzter_abgleich')
+            if neuer_plan or (not pause and (letzter is None or (jetzt_abgleich - letzter).total_seconds() >= 60)):
+                info = _hole_service_account_info()
+                if info is None:
+                    raise RuntimeError('Kalenderzugang ist nicht eingerichtet.')
+                creds = service_account.Credentials.from_service_account_info(info, scopes=KALENDER_SCOPES)
+                dienst = build('calendar', 'v3', credentials=creds)
+                termine, token = [], None
+                while True:
+                    antwort = dienst.events().list(
+                        calendarId=kalender_id,
+                        timeMin=(jetzt_abgleich - datetime.timedelta(days=30)).isoformat(),
+                        timeMax=(jetzt_abgleich + datetime.timedelta(days=180)).isoformat(),
+                        singleEvents=True, maxResults=2500, pageToken=token,
+                    ).execute()
+                    termine.extend(antwort.get('items', []))
+                    token = antwort.get('nextPageToken')
+                    if not token:
+                        break
+                def hole_termin(ident):
+                    # API-/Berechtigungsfehler brechen den Abgleich ab und erzeugen keine Absagen.
+                    return dienst.events().get(calendarId=kalender_id, eventId=ident).execute()
+                aktualisiert = kalender_absagen_abgleichen(eigene, termine, hole_termin, jetzt_abgleich, neuer_plan)
+                neue_daten = {key: value for key, value in daten.items() if not key.startswith(prefix)}
+                neue_daten.update({prefix + key: value for key, value in aktualisiert.items()})
+                if neue_daten != daten:
+                    verbindung.update(worksheet='Kalenderabgleich', data=pd.DataFrame([
+                        {'ID': key, 'Daten': json.dumps(value, ensure_ascii=False)}
+                        for key, value in neue_daten.items()
+                    ], columns=['ID', 'Daten']))
+                eigene = aktualisiert
+                st.session_state['absagen_letzter_abgleich'] = jetzt_abgleich
+                if neuer_plan:
+                    st.success('Neuer Stundenplan übernommen. Entfernte Termine wurden nicht als Absagen gezählt. Falls die Pause noch aktiviert ist, kannst du sie jetzt ausschalten.')
+            elif pause:
+                st.info('Erkennung pausiert. Nach Abschluss den Haken entfernen und den neuen Plan übernehmen.')
+            st.caption('Abgleich beim Öffnen/Bedienen, höchstens einmal pro Minute. Vorschau: 180 Tage. Die Erfassung beginnt mit dem ersten erfolgreichen Abgleich.')
+            absagen = {key: value for key, value in eigene.items() if value.get('Status', '').startswith('Absage')}
+            st.write(f'Absagen: {len(absagen)}')
+            for ident, eintrag in sorted(absagen.items(), key=lambda item: item[1].get('Start', ''), reverse=True):
+                zeit = datetime.datetime.fromisoformat(eintrag['Start']).astimezone(ZoneInfo('Europe/Berlin'))
+                st.write(f"{zeit:%d.%m.%Y %H:%M} · {eintrag['Name']}")
+                st.caption('Automatisch erkannt · bitte bei Verschiebungen korrigieren.')
+                if st.button('Als verschoben / keine Absage markieren', key='absage_korrektur_' + ident):
+                    daten = {key: value for key, value in daten.items() if not key.startswith(prefix)}
+                    eigene[ident]['Status'] = 'Verschoben / keine Absage'
+                    daten.update({prefix + key: value for key, value in eigene.items()})
+                    verbindung.update(worksheet='Kalenderabgleich', data=pd.DataFrame([
+                        {'ID': key, 'Daten': json.dumps(value, ensure_ascii=False)} for key, value in daten.items()
+                    ], columns=['ID', 'Daten']))
+                    st.rerun()
+        except Exception as fehler:
+            st.warning(f'Absagenabgleich nicht abgeschlossen: {fehler}. Es werden keine unbestätigten Löschungen als Absagen gespeichert.')
+
+
 df_archiv = lade_archiv_aus_sheet()
+
+if hole_query_parameter("mini", "0") != "1":
+    zeige_kalender_absagen()
 
 # --- DAUERHAFTE STEUERUNG IN DER SEITENLEISTE ---
 schueler_liste = erstelle_schueler_liste(df_archiv)
@@ -2502,4 +2623,5 @@ elif aktive_ansicht == "zertifikate":
             whatsapp_text = f"Hallo! Hier ist das Jahres-Zertifikat {aktuelles_jahr} f\u00FCr {student} aus der Klavierstunde."
             whatsapp_url = f"https://wa.me/?text={urllib.parse.quote(whatsapp_text)}"
             st.link_button("\u00DCber WhatsApp teilen", whatsapp_url, use_container_width=True)
+
 
