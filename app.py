@@ -1997,6 +1997,17 @@ def zeige_kalender_absagen():
         pause = st.checkbox('Stundenplan wird gerade geändert – Erkennung pausieren', key='kalender_plan_pause')
         neuer_plan = st.button('Neuen Stundenplan übernehmen', key='kalender_neuer_plan')
         st.caption('Vor dem Umbau pausieren. Danach den neuen Plan übernehmen: entfernte Termine zählen dann nicht als Absagen. Bisherige Absagen bleiben erhalten.')
+        if st.checkbox('Info zum neuen Schuljahr anzeigen', key='stundenplan_schuljahr_info'):
+            st.info(
+                '**Neuer Stundenplan zum Schuljahr**\n\n'
+                '1. Aktiviere hier zuerst **„Stundenplan wird gerade geändert – Erkennung pausieren“**.\n'
+                '2. Ändere danach deine Unterrichtstermine im Google Kalender. Die Pause muss während der Änderungen aktiviert bleiben.\n'
+                '3. Kehre ins Cockpit zurück und klicke bei noch aktivierter Pause auf **„Neuen Stundenplan übernehmen“**. Warte auf die Erfolgsmeldung.\n'
+                '4. Schalte anschließend die Pause aus.\n\n'
+                'Die entfernten Termine des alten Plans werden bei der Übernahme nicht als Absagen gezählt. '
+                'Bereits gespeicherte Unterrichtseinträge und Absagen bleiben erhalten. '
+                'Das gilt auch für größere Stundenplanänderungen während des Schuljahres.'
+            )
         if GSheetsConnection is None:
             st.warning('Die Absagenerkennung benötigt die Google-Sheets-Verbindung.')
             return
