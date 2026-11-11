@@ -1135,6 +1135,54 @@ def zeige_uebe_zaehler(schueler_key, kontext_text, hausaufgabe_feld_key):
             )
             st.success("In die Hausaufgabe \u00FCbernommen \u2013 wird beim Speichern des Unterrichtseintrags mit gesichert.")
 
+def hole_letzte_hausaufgabe(archiv_zeilen, student, unterrichtsdatum):
+    """Letzte abgeschlossene Stunde vor dem ausgewählten Unterrichtstag.
+
+    Alte Archiveinträge ohne Status bleiben lesbar; Entwürfe und Absagen
+    werden nicht als vorheriger Unterricht verwendet.
+    """
+    treffer = []
+    for zeile in archiv_zeilen:
+        if str(zeile.get('Schüler', '')).strip().casefold() != str(student).strip().casefold():
+            continue
+        status = zeile.get('Status', '')
+        if status is None or (isinstance(status, float) and status != status):
+            status = ''
+        if str(status).strip().casefold() not in ('', 'abgeschlossen'):
+            continue
+        try:
+            datum = datetime.date.fromisoformat(str(zeile.get('Datum', ''))[:10])
+        except (ValueError, TypeError):
+            continue
+        if datum < unterrichtsdatum:
+            treffer.append((datum, zeile))
+    if not treffer:
+        return None
+    # Bei mehreren Einträgen desselben Tages zählt die zuletzt gespeicherte Zeile.
+    datum, zeile = max(enumerate(treffer), key=lambda item: (item[1][0], item[0]))[1]
+    text = zeile.get('Hausaufgabe', '')
+    if text is None or (isinstance(text, float) and text != text):
+        text = ''
+    return {'Datum': datum, 'Hausaufgabe': str(text).strip()}
+
+
+def zeige_letzte_hausaufgabe(archiv, student, unterrichtsdatum):
+    with st.container(border=True):
+        st.markdown(f'**Hausaufgabe aus der letzten Stunde · {student}**')
+        if 'gsheets_fehler' in st.session_state:
+            st.caption('Die letzte Hausaufgabe kann gerade nicht zuverlässig aus dem Archiv geladen werden.')
+            return
+        eintrag = hole_letzte_hausaufgabe(archiv.to_dict('records'), student, unterrichtsdatum)
+        if eintrag is None:
+            st.caption('Noch keine vorherige Unterrichtsstunde im Archiv vorhanden.')
+            return
+        st.caption(f"Unterricht vom {eintrag['Datum']:%d.%m.%Y}")
+        if eintrag['Hausaufgabe']:
+            st.text(eintrag['Hausaufgabe'])
+        else:
+            st.caption('Für diese Stunde wurde keine Hausaufgabe notiert.')
+
+
 def zeige_transferbereich(student, student_bekannt=True):
     schuelername = str(student).strip() or "Sch\u00FCler"
     schueler_key = repertoire_schluessel(schuelername)
@@ -2391,6 +2439,9 @@ if aktive_ansicht == "live":
         """,
         unsafe_allow_html=True,
     )
+
+    if student_bekannt:
+        zeige_letzte_hausaufgabe(df_archiv, student, unterrichtsdatum)
 
     linke_cockpit_spalte, rechte_cockpit_spalte = st.columns(
         [0.93, 1.07],
